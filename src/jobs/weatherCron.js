@@ -60,7 +60,7 @@ const startWeatherCron = () => {
     try {
       await processRouteWeatherRisk();
     } catch (error) {
-      console.error('Weather cron job failed:', error.message);
+      process.stderr.write(`Weather cron job failed: ${error.message}\n`);
     }
   });
 };

@@ -16,12 +16,8 @@ const navigationItems = [
 function App() {
   useRegisterSW({
     immediate: true,
-    onRegisteredSW(swUrl) {
-      console.log(`Service worker registered: ${swUrl}`);
-    },
-    onRegisterError(error) {
-      console.error('Service worker registration failed:', error);
-    },
+    onRegisteredSW() {},
+    onRegisterError() {},
   });
 
   return (

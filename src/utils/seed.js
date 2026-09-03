@@ -35,10 +35,8 @@ const clearCollections = async () => {
 const seedDatabase = async () => {
   try {
     await mongoose.connect(mongoUri);
-    console.log('Connected to MongoDB');
 
     await clearCollections();
-    console.log('Cleared existing Shipments, Vehicles, Routes, Incidents, and Users');
 
     const [admin, driver] = await User.insertMany([
       { name: 'Demo Admin', email: 'admin@sih26002.demo', password: 'demo-admin-password', role: 'admin', phone: '+91-90000-26002' },
@@ -74,14 +72,11 @@ const seedDatabase = async () => {
       { type: 'flooding', title: 'Flooded stretch near Barak Valley corridor', description: 'Localized flooding affecting logistics movement towards southern Assam and Mizoram routes.', severity: 'medium', location: { lat: 24.8333, lng: 92.7789, address: 'Silchar-Barak Valley Corridor, Assam' }, status: 'reported', reportedBy: driver._id },
     ]);
 
-    console.log('Demo seed completed successfully');
-    console.table({ users: 2, vehicles: vehicles.length, routes: routes.length, shipments: shipments.length, incidents: incidents.length });
   } catch (error) {
-    console.error('Demo seed failed:', error);
+    process.stderr.write(`Demo seed failed: ${error.message}\n`);
     process.exitCode = 1;
   } finally {
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
   }
 };
 

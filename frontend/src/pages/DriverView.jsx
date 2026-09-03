@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
@@ -52,6 +53,10 @@ function DriverView() {
       transports: ['websocket', 'polling'],
     });
 
+    socket.on('connect_error', () => {
+      toast.error('Live driver updates are unavailable. Please check backend connectivity.');
+    });
+
     socket.on('route_hazard_alert', (alert) => {
       setStatus('hazard');
       setAlternateRouteCoordinates(normalizeAlternateRoute(alert));
@@ -66,6 +71,7 @@ function DriverView() {
     });
 
     return () => {
+      socket.off('connect_error');
       socket.off('route_hazard_alert');
       socket.disconnect();
     };

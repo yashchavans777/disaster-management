@@ -30,17 +30,11 @@ startWeatherCron();
 startSyncWorker();
 
 io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-
   socket.on('location_update', (locationUpdate) => {
     io.emit('vehicle_moved', {
       ...locationUpdate,
       updatedAt: locationUpdate?.updatedAt || new Date().toISOString(),
     });
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
   });
 });
 
