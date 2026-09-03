@@ -11,10 +11,15 @@ const evaluateRouteRisk = async (req, res) => {
     }
 
     const weatherData = await weatherService.getWeatherData(lat, lng);
-    const riskLevel = await aiRouteService.calculateRouteRisk(weatherData);
+    const routeRiskInputs = {
+      precipitation: weatherData.precipitation,
+      wind_speed: weatherData.wind_speed,
+    };
+    const riskLevel = await aiRouteService.calculateRouteRisk(routeRiskInputs);
 
     return apiResponse.success(res, 200, 'Route risk evaluated successfully', {
       riskLevel,
+      weather: routeRiskInputs,
     });
   } catch (error) {
     return apiResponse.error(res, 500, 'Failed to evaluate route risk', error.message);
