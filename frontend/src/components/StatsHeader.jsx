@@ -19,7 +19,14 @@ const statConfig = [
 ];
 
 export default function StatsHeader({ stats }) {
-  const displayStats = stats || statConfig;
+  const displayStats = (stats || statConfig).map((stat) => {
+    const fallbackConfig = statConfig.find((item) => item.label === stat.label);
+    return {
+      ...fallbackConfig,
+      ...stat,
+      icon: stat.icon || fallbackConfig?.icon
+    };
+  });
 
   return (
     <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

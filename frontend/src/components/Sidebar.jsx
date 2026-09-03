@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const navItems = [
   { name: 'Dashboard', icon: 'dashboard', path: '/', active: true },
-  { name: 'Incidents', icon: 'incident', path: '/incidents', active: false },
+  { name: 'Incidents', icon: 'incidents', path: '/incidents', active: false },
   { name: 'Shipments', icon: 'shipments', path: '/shipments', active: false },
   { name: 'Hazards', icon: 'hazards', path: '/hazards', active: false },
   { name: 'Analytics', icon: 'analytics', path: '/analytics', active: false },

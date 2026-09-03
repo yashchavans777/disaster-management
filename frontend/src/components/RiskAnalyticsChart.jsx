@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const defaultRiskData = [
   { level: 'Low', count: 10, color: '#22c55e' },
@@ -39,8 +39,6 @@ export default function RiskAnalyticsChart({ shipments = [] }) {
     ];
   }, [shipments]);
 
-  const totalCount = riskData.reduce((sum, r) => sum + r.count, 0);
-
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
       <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
@@ -64,7 +62,7 @@ export default function RiskAnalyticsChart({ shipments = [] }) {
             <Legend verticalAlign="top" align="right" height={36} wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
             <Bar dataKey="count" name="Shipments" radius={[6, 6, 0, 0]}>
               {riskData.map((entry) => (
-                <cell key={`cell-${entry.level}`} fill={entry.color} />
+                <Cell key={`cell-${entry.level}`} fill={entry.color} />
               ))}
             </Bar>
           </BarChart>
