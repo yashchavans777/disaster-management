@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-/**
- * Standard API response helpers.
- *
- * Keeps every endpoint returning the same JSON envelope:
- *   { success: Boolean, message: String, data: Any }
- */
 
-/**
- * Send a success response.
- *
  * @param {import('express').Response} res - Express response object.
  * @param {*} [data=null] - Payload to send back to the client.
  * @param {string} [message='Success'] - Human-readable success message.
@@ -16,12 +6,16 @@
  * @returns {import('express').Response} The Express response object.
  */
 const sendSuccess = (res, data = null, message = 'Success', statusCode = 200) => {
+
+const success = (res, statusCode = 200, message = 'Success', data = null) => {
+
   return res.status(statusCode).json({
     success: true,
     message,
     data,
   });
 };
+
 
 /**
  * Send an error response.
@@ -50,3 +44,17 @@ module.exports = { sendSuccess, sendError };
 =======
  
 >>>>>>> origin/main
+=======
+const error = (res, statusCode = 500, message = 'Internal server error', errors = null) => {
+  return res.status(statusCode).json({
+    success: false,
+    message,
+    errors,
+  });
+};
+
+module.exports = {
+  success,
+  error,
+};
+>>>>>>> ee3d7b5df7c70f215aea71e1e57d028f03369bd0
