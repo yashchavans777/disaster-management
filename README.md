@@ -1,6 +1,30 @@
 # Smart Logistics Platform - SIH26002
 
+![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=white)
+![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/API-Express-000000?logo=express&logoColor=white)
+![FastAPI](https://img.shields.io/badge/AI-FastAPI-009688?logo=fastapi&logoColor=white)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb&logoColor=white)
+![Docker](https://img.shields.io/badge/DevOps-Docker-2496ED?logo=docker&logoColor=white)
+![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+
 Smart Logistics Platform is a hackathon-ready logistics intelligence system built for **Smart India Hackathon problem statement SIH26002**. The platform combines a MERN-based web application with a FastAPI intelligence service to support safer, smarter, and more responsive logistics operations during dynamic conditions such as weather disruptions, route risks, incidents, and fleet movement.
+
+## Screenshots
+
+> Add your latest product screenshots here before final judging.
+
+### Dashboard Overview
+
+![Dashboard Screenshot Placeholder](https://via.placeholder.com/1200x675.png?text=Dashboard+Screenshot)
+
+### Route Risk Visualization
+
+![Route Risk Screenshot Placeholder](https://via.placeholder.com/1200x675.png?text=Route+Risk+Visualization)
+
+### Incident Reporting Modal
+
+![Incident Modal Screenshot Placeholder](https://via.placeholder.com/1200x675.png?text=Incident+Reporting+Modal)
 
 ## Tech Stack
 
