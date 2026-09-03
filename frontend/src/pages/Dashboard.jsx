@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 
 import apiClient from '../api/apiClient';
 import MapViewer from '../components/MapViewer';
+import ReportIncidentModal from '../components/ReportIncidentModal';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
@@ -192,15 +193,15 @@ const writeQueuedIncidents = (incidents) => {
   localStorage.setItem(INCIDENT_QUEUE_KEY, JSON.stringify(incidents));
 };
 
-const buildLandslideIncidentPayload = () => ({
-  type: 'landslide',
-  title: 'Landslide reported from dashboard',
-  description: 'Field worker reported a landslide blocking a relief corridor. Requires route review.',
-  severity: 'high',
+const buildIncidentPayload = ({ type, description, latitude, longitude }) => ({
+  type,
+  title: `${type.charAt(0).toUpperCase()}${type.slice(1)} reported from dashboard`,
+  description,
+  severity: type === 'roadblock' ? 'medium' : 'high',
   location: {
-    lat: 25.5788,
-    lng: 91.8933,
-    address: 'Shillong Bypass, Meghalaya',
+    lat: latitude,
+    lng: longitude,
+    address: 'Reported from live operations dashboard',
   },
   status: 'reported',
 });
@@ -212,6 +213,7 @@ function Dashboard() {
   const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
   const [routeRiskResults, setRouteRiskResults] = useState({});
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -364,8 +366,8 @@ function Dashboard() {
     }
   };
 
-  const handleReportLandslide = async () => {
-    const payload = buildLandslideIncidentPayload();
+  const handleReportIncident = async ({ type, description, latitude, longitude }) => {
+    const payload = buildIncidentPayload({ type, description, latitude, longitude });
 
     if (!navigator.onLine) {
       const queuedIncidents = readQueuedIncidents();
@@ -373,17 +375,19 @@ function Dashboard() {
       toast('You are offline. Data is cached locally.', {
         icon: '📡',
       });
+      setIsIncidentModalOpen(false);
       return;
     }
 
     try {
       setIsSubmittingIncident(true);
       await apiClient.post('/incidents', payload);
-      toast.success('Landslide report submitted successfully.');
+      toast.success('Incident report submitted successfully.');
+      setIsIncidentModalOpen(false);
     } catch (error) {
       const queuedIncidents = readQueuedIncidents();
       writeQueuedIncidents([...queuedIncidents, payload]);
-      toast.error(error.response?.data?.message || 'Failed to submit landslide report. Saved for retry.');
+      toast.error(error.response?.data?.message || 'Failed to submit incident report. Saved for retry.');
     } finally {
       setIsSubmittingIncident(false);
     }
@@ -422,14 +426,6 @@ function Dashboard() {
             {isEvaluatingRisk ? 'Evaluating...' : 'Evaluate Route Risks'}
           </button>
 
-          <button
-            type="button"
-            onClick={handleReportLandslide}
-            disabled={isSubmittingIncident}
-            className="inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isSubmittingIncident ? 'Reporting...' : 'Report Landslide'}
-          </button>
         </div>
 
         {errorMessage ? (
@@ -438,14 +434,32 @@ function Dashboard() {
           </div>
         ) : null}
 
-        {isLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500 shadow-sm">
-            Loading active shipments...
-          </div>
-        ) : (
-          <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} />
-        )}
+        <div className="relative">
+          {isLoading ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500 shadow-sm">
+              Loading active shipments...
+            </div>
+          ) : (
+            <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} />
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsIncidentModalOpen(true)}
+            className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-200"
+            aria-label="Open incident reporting modal"
+          >
+            <span className="text-3xl leading-none">+</span>
+          </button>
+        </div>
       </section>
+
+      <ReportIncidentModal
+        isOpen={isIncidentModalOpen}
+        isSubmitting={isSubmittingIncident}
+        onClose={() => setIsIncidentModalOpen(false)}
+        onSubmit={handleReportIncident}
+      />
     </div>
   );
 }
