@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 
 import apiClient from '../api/apiClient';
 import MapViewer from '../components/MapViewer';
+
+const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
+const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
 
 const locationCoordinates = {
   guwahati: [26.1445, 91.7362],
@@ -150,45 +154,141 @@ const buildAlternateRoute = (coordinates) => {
   return [coordinates[0], alternateMidpoint, coordinates[coordinates.length - 1]];
 };
 
+const readCachedShipments = () => {
+  try {
+    const cachedValue = localStorage.getItem(SHIPMENTS_CACHE_KEY);
+
+    if (!cachedValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(cachedValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+};
+
+const cacheShipments = (shipments) => {
+  localStorage.setItem(SHIPMENTS_CACHE_KEY, JSON.stringify(shipments));
+};
+
+const readQueuedIncidents = () => {
+  try {
+    const cachedValue = localStorage.getItem(INCIDENT_QUEUE_KEY);
+
+    if (!cachedValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(cachedValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeQueuedIncidents = (incidents) => {
+  localStorage.setItem(INCIDENT_QUEUE_KEY, JSON.stringify(incidents));
+};
+
+const buildLandslideIncidentPayload = () => ({
+  type: 'landslide',
+  title: 'Landslide reported from dashboard',
+  description: 'Field worker reported a landslide blocking a relief corridor. Requires route review.',
+  severity: 'high',
+  location: {
+    lat: 25.5788,
+    lng: 91.8933,
+    address: 'Shillong Bypass, Meghalaya',
+  },
+  status: 'reported',
+});
+
 function Dashboard() {
-  const [shipments, setShipments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [shipments, setShipments] = useState(() => readCachedShipments());
+  const [isLoading, setIsLoading] = useState(() => readCachedShipments().length === 0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
   const [routeRiskResults, setRouteRiskResults] = useState({});
+  const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
+
+  const fetchShipments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setErrorMessage('');
+
+      const response = await apiClient.get('/shipments');
+      const shipmentData = Array.isArray(response.data?.data) ? response.data.data : [];
+
+      setShipments(shipmentData);
+      cacheShipments(shipmentData);
+      setRouteRiskResults({});
+
+      return shipmentData;
+    } catch (error) {
+      const cachedShipments = readCachedShipments();
+      setShipments(cachedShipments);
+      setErrorMessage(error.response?.data?.message || 'Failed to load active shipments.');
+      return cachedShipments;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const syncOfflineIncidents = useCallback(async () => {
+    const queuedIncidents = readQueuedIncidents();
+
+    if (!queuedIncidents.length) {
+      await fetchShipments();
+      return;
+    }
+
+    const failedIncidents = [];
+
+    for (const incident of queuedIncidents) {
+      try {
+        await apiClient.post('/incidents', incident);
+      } catch {
+        failedIncidents.push(incident);
+      }
+    }
+
+    writeQueuedIncidents(failedIncidents);
+
+    if (failedIncidents.length === 0) {
+      toast.success('Offline incident reports synced successfully.');
+    } else {
+      toast.error('Some offline incident reports could not be synced yet.');
+    }
+
+    await fetchShipments();
+  }, [fetchShipments]);
 
   useEffect(() => {
-    let isMounted = true;
+    fetchShipments();
+  }, [fetchShipments]);
 
-    const fetchShipments = async () => {
-      try {
-        setIsLoading(true);
-        setErrorMessage('');
-
-        const response = await apiClient.get('/shipments');
-        const shipmentData = Array.isArray(response.data?.data) ? response.data.data : [];
-
-        if (isMounted) {
-          setShipments(shipmentData);
-          setRouteRiskResults({});
-        }
-      } catch (error) {
-        if (isMounted) {
-          setErrorMessage(error.response?.data?.message || 'Failed to load active shipments.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+  useEffect(() => {
+    const handleOffline = () => {
+      toast('You are offline. Data is cached locally.', {
+        icon: '📡',
+      });
     };
 
-    fetchShipments();
+    const handleOnline = async () => {
+      toast.success('Back online! Syncing data...');
+      await syncOfflineIncidents();
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
 
     return () => {
-      isMounted = false;
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
     };
-  }, []);
+  }, [syncOfflineIncidents]);
 
   const activeShipments = useMemo(
     () => shipments.filter((shipment) => shipment.status !== 'delivered'),
@@ -264,6 +364,31 @@ function Dashboard() {
     }
   };
 
+  const handleReportLandslide = async () => {
+    const payload = buildLandslideIncidentPayload();
+
+    if (!navigator.onLine) {
+      const queuedIncidents = readQueuedIncidents();
+      writeQueuedIncidents([...queuedIncidents, payload]);
+      toast('You are offline. Data is cached locally.', {
+        icon: '📡',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmittingIncident(true);
+      await apiClient.post('/incidents', payload);
+      toast.success('Landslide report submitted successfully.');
+    } catch (error) {
+      const queuedIncidents = readQueuedIncidents();
+      writeQueuedIncidents([...queuedIncidents, payload]);
+      toast.error(error.response?.data?.message || 'Failed to submit landslide report. Saved for retry.');
+    } finally {
+      setIsSubmittingIncident(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <section className="rounded-xl bg-white p-8 shadow-sm">
@@ -287,7 +412,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div>
+        <div className="flex flex-wrap gap-3">
           <button
             type="button"
             onClick={handleEvaluateRouteRisks}
@@ -295,6 +420,15 @@ function Dashboard() {
             className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isEvaluatingRisk ? 'Evaluating...' : 'Evaluate Route Risks'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleReportLandslide}
+            disabled={isSubmittingIncident}
+            className="inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isSubmittingIncident ? 'Reporting...' : 'Report Landslide'}
           </button>
         </div>
 
