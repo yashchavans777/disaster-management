@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-
 import apiClient from '../api/apiClient';
 import MapViewer from '../components/MapViewer';
+import StatsHeader from '../components/StatsHeader';
+import RiskAnalyticsChart from '../components/RiskAnalyticsChart';
 
 const locationCoordinates = {
   guwahati: [26.1445, 91.7362],
@@ -172,43 +173,62 @@ function Dashboard() {
   const activeVehicles = useMemo(() => mapShipmentsToVehicles(activeShipments), [activeShipments]);
   const activeRoutes = useMemo(() => mapShipmentsToRoutes(activeShipments), [activeShipments]);
 
+  const dashboardStats = useMemo(
+    () => [
+      { label: 'Total Fleet', value: activeShipments.length },
+      { label: 'Active Hazards', value: activeRoutes.length },
+      { label: 'Safe Routes Calculated', value: activeRoutes.length }
+    ],
+    [activeShipments, activeRoutes]
+  );
+
   return (
     <div className="space-y-6">
-      <section className="rounded-xl bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-3 text-slate-600">
-          Monitor active relief vehicles across the North Eastern Region of India.
+      <header>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Monitor active relief vehicles and risk analytics across the North Eastern Region of India.
         </p>
-      </section>
+      </header>
 
-      <section className="space-y-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">Active Vehicle Map</h2>
-            <p className="text-sm text-slate-600">
-              Live map view of active shipments and their current route paths.
-            </p>
-          </div>
+      <StatsHeader stats={dashboardStats} />
 
-          <div className="text-sm text-slate-500">
-            Active shipments: <span className="font-semibold text-slate-700">{activeShipments.length}</span>
-          </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <RiskAnalyticsChart shipments={activeShipments} />
         </div>
 
-        {errorMessage ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorMessage}
-          </div>
-        ) : null}
+        <div className="lg:col-span-2">
+          <section className="space-y-3">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Active Vehicle Map</h2>
+                <p className="text-sm text-gray-500">
+                  Live map view of active shipments and their current route paths.
+                </p>
+              </div>
 
-        {isLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500 shadow-sm">
-            Loading active shipments...
-          </div>
-        ) : (
-          <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} />
-        )}
-      </section>
+              <div className="text-sm text-gray-500">
+                Active shipments: <span className="font-semibold text-gray-700">{activeShipments.length}</span>
+              </div>
+            </div>
+
+            {errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            {isLoading ? (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500 shadow-sm">
+                Loading active shipments...
+              </div>
+            ) : (
+              <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} />
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
