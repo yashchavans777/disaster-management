@@ -80,8 +80,11 @@ const mapShipmentsToVehicles = (shipments) =>
 
       return {
         id: shipment._id,
+        vehicleId: vehicle?._id,
+        trackingId: shipment.trackingId,
         name:
           vehicle?.name ||
+          vehicle?.vehicleNumber ||
           vehicle?.registrationNumber ||
           `${shipment.origin} → ${shipment.destination}`,
         latitude: vehicleCoordinates[0],

@@ -1,7 +1,7 @@
-const app = require('./src/app');
+const { server } = require('./src/app');
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Node.js backend running on port ${PORT}`);
 });

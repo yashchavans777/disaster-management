@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
 
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
@@ -7,7 +9,140 @@ const riskColors = {
   high: '#dc2626',
 };
 
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const ANIMATION_DURATION_MS = 900;
+
+const getVehicleKeys = (vehicle = {}) =>
+  [vehicle.id, vehicle._id, vehicle.vehicleId, vehicle.trackingId, vehicle.vehicleNumber, vehicle.registrationNumber]
+    .filter(Boolean)
+    .map(String);
+
+const getUpdateKeys = (update = {}) =>
+  [
+    update.id,
+    update._id,
+    update.shipmentId,
+    update.vehicleId,
+    update.trackingId,
+    update.vehicleNumber,
+    update.registrationNumber,
+  ]
+    .filter(Boolean)
+    .map(String);
+
+const getUpdateCoordinates = (update = {}) => {
+  const latitude = update.latitude ?? update.lat ?? update.location?.latitude ?? update.location?.lat;
+  const longitude = update.longitude ?? update.lng ?? update.lon ?? update.location?.longitude ?? update.location?.lng;
+
+  if (latitude === undefined || longitude === undefined) {
+    return null;
+  }
+
+  return {
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+  };
+};
+
+const animateVehicleMovement = (vehicle, update, onFrame) => {
+  const coordinates = getUpdateCoordinates(update);
+
+  if (!coordinates || Number.isNaN(coordinates.latitude) || Number.isNaN(coordinates.longitude)) {
+    return undefined;
+  }
+
+  const startLatitude = Number(vehicle.latitude);
+  const startLongitude = Number(vehicle.longitude);
+  const deltaLatitude = coordinates.latitude - startLatitude;
+  const deltaLongitude = coordinates.longitude - startLongitude;
+  const startedAt = performance.now();
+  let animationFrameId;
+
+  const step = (timestamp) => {
+    const progress = Math.min((timestamp - startedAt) / ANIMATION_DURATION_MS, 1);
+    const easedProgress = 1 - (1 - progress) ** 3;
+
+    onFrame({
+      ...vehicle,
+      latitude: Number((startLatitude + deltaLatitude * easedProgress).toFixed(6)),
+      longitude: Number((startLongitude + deltaLongitude * easedProgress).toFixed(6)),
+      status: update.status || vehicle.status,
+      driverName: update.driverName || update.driver?.name || vehicle.driverName,
+      lastUpdatedAt: update.updatedAt || new Date().toISOString(),
+    });
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(step);
+    }
+  };
+
+  animationFrameId = requestAnimationFrame(step);
+
+  return () => cancelAnimationFrame(animationFrameId);
+};
+
 function MapViewer({ activeVehicles = [], routes = [] }) {
+  const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
+  const animationsRef = useRef(new Map());
+  const liveVehiclesRef = useRef(activeVehicles);
+
+  useEffect(() => {
+    setLiveVehicles((currentVehicles) => {
+      const currentById = new Map(currentVehicles.map((vehicle) => [vehicle.id, vehicle]));
+
+      return activeVehicles.map((vehicle) => currentById.get(vehicle.id) || vehicle);
+    });
+  }, [activeVehicles]);
+
+  useEffect(() => {
+    liveVehiclesRef.current = liveVehicles;
+  }, [liveVehicles]);
+
+  useEffect(() => {
+    const socket = io(SOCKET_SERVER_URL, {
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('vehicle_moved', (locationUpdate) => {
+      const updateKeys = getUpdateKeys(locationUpdate);
+      const matchedVehicle = liveVehiclesRef.current.find((vehicle) =>
+        getVehicleKeys(vehicle).some((vehicleKey) => updateKeys.includes(vehicleKey))
+      );
+
+      if (!matchedVehicle) {
+        return;
+      }
+
+      const cancelExistingAnimation = animationsRef.current.get(matchedVehicle.id);
+
+      if (cancelExistingAnimation) {
+        cancelExistingAnimation();
+      }
+
+      const cancelAnimation = animateVehicleMovement(matchedVehicle, locationUpdate, (nextVehicle) => {
+        setLiveVehicles((vehiclesDuringAnimation) =>
+          vehiclesDuringAnimation.map((vehicle) => (vehicle.id === matchedVehicle.id ? nextVehicle : vehicle))
+        );
+      });
+
+      if (cancelAnimation) {
+        animationsRef.current.set(matchedVehicle.id, cancelAnimation);
+      }
+    });
+
+    return () => {
+      socket.off('vehicle_moved');
+      socket.disconnect();
+      animationsRef.current.forEach((cancelAnimation) => cancelAnimation());
+      animationsRef.current.clear();
+    };
+  }, []);
+
+  const visibleVehicles = useMemo(
+    () => liveVehicles.filter((vehicle) => vehicle.latitude !== undefined && vehicle.longitude !== undefined),
+    [liveVehicles]
+  );
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <MapContainer
@@ -36,13 +171,18 @@ function MapViewer({ activeVehicles = [], routes = [] }) {
           />
         ))}
 
-        {activeVehicles.map((vehicle) => (
+        {visibleVehicles.map((vehicle) => (
           <Marker key={vehicle.id} position={[vehicle.latitude, vehicle.longitude]}>
             <Popup>
               <div className="min-w-[180px]">
                 <h3 className="font-semibold text-slate-900">{vehicle.name}</h3>
                 <p className="text-sm text-slate-600">Status: {vehicle.status}</p>
                 <p className="text-sm text-slate-600">Driver: {vehicle.driverName}</p>
+                {vehicle.lastUpdatedAt ? (
+                  <p className="text-xs text-slate-500">
+                    Updated: {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
+                  </p>
+                ) : null}
               </div>
             </Popup>
           </Marker>
