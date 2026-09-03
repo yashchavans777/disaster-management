@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 const navItems = [
   { name: 'Dashboard', icon: 'dashboard', path: '/', active: true },
+  { name: 'Driver View', icon: 'driver', path: '/driver', active: false },
   { name: 'Incidents', icon: 'incidents', path: '/incidents', active: false },
   { name: 'Shipments', icon: 'shipments', path: '/shipments', active: false },
   { name: 'Hazards', icon: 'hazards', path: '/hazards', active: false },
@@ -24,6 +25,11 @@ const iconMap = {
   shipments: (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 9h10a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5a2 2 0 012-2z" />
+    </svg>
+  ),
+  driver: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17a4 4 0 108 0M6 17H4v-5l2-5h12l2 5v5h-2M6 17h12M7 12h10M9 7h6" />
     </svg>
   ),
   hazards: (

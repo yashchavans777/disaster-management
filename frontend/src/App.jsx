@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import DriverView from './pages/DriverView';
 import Login from './pages/Login';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <div className="mx-auto max-w-7xl px-6 py-8">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/driver" element={<DriverView />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </div>
