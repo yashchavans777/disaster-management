@@ -22,8 +22,13 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'driver', 'manager'],
+      enum: ['admin', 'driver', 'manager', 'operator'],
       required: true,
+      default: 'operator',
+    },
+    phone: {
+      type: String,
+      trim: true,
     },
   },
   {

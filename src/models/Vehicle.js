@@ -6,20 +6,39 @@ const vehicleSchema = new Schema(
   {
     registrationNumber: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       trim: true,
+    },
+    vehicleNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    type: {
+      type: String,
+      enum: ['truck', 'mini-truck', 'van', 'container', 'refrigerated-truck'],
+      default: 'truck',
     },
     capacity: {
       type: Number,
-      required: true,
+      min: 0,
+    },
+    capacityKg: {
+      type: Number,
       min: 0,
     },
     status: {
       type: String,
-      enum: ['available', 'on-trip', 'maintenance'],
+      enum: ['available', 'on-trip', 'in-transit', 'maintenance'],
       required: true,
       default: 'available',
+    },
+    currentLocation: {
+      lat: Number,
+      lng: Number,
+      address: String,
     },
   },
   {

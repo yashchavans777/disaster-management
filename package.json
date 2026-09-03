@@ -1,0 +1,43 @@
+{
+  "name": "disaster-management",
+  "version": "1.0.0",
+  "description": "Smart Logistics Platform - SIH26002 backend and unified development workspace.",
+  "main": "server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "backend": "node server.js",
+    "frontend": "npm --prefix ../tourmitra-web-for-SIH- run dev",
+    "fastapi": "uvicorn fastapi-server.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:all": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "test": "echo \"No automated tests configured yet\"",
+    "seed": "node src/utils/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashchavans777/disaster-management.git"
+  },
+  "keywords": [
+    "smart-logistics",
+    "sih26002",
+    "mern",
+    "fastapi",
+    "disaster-management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yashchavans777/disaster-management/issues"
+  },
+  "homepage": "https://github.com/yashchavans777/disaster-management#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.4"
+  }
+}

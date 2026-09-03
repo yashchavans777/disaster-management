@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
-const waypointSchema = new Schema(
+const coordinateSchema = new Schema(
   {
     lat: {
       type: Number,
@@ -11,6 +11,10 @@ const waypointSchema = new Schema(
     lng: {
       type: Number,
       required: true,
+    },
+    address: {
+      type: String,
+      trim: true,
     },
   },
   {
@@ -23,15 +27,34 @@ const routeSchema = new Schema(
     shipmentId: {
       type: Schema.Types.ObjectId,
       ref: 'Shipment',
-      required: true,
+      default: null,
+    },
+    name: {
+      type: String,
+      trim: true,
+    },
+    origin: {
+      type: coordinateSchema,
+    },
+    destination: {
+      type: coordinateSchema,
     },
     waypoints: {
-      type: [waypointSchema],
+      type: [coordinateSchema],
       default: [],
+    },
+    distanceKm: {
+      type: Number,
+      min: 0,
+    },
+    estimatedDurationHours: {
+      type: Number,
+      min: 0,
     },
     riskLevel: {
       type: String,
-      enum: ['low', 'moderate', 'high'],
+      enum: ['low', 'moderate', 'medium', 'high', 'critical'],
+      default: 'low',
       required: true,
     },
     isBlocked: {
