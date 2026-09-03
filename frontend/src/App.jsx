@@ -1,10 +1,22 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 import Dashboard from './pages/Dashboard';
+import DriverView from './pages/DriverView';
 import Login from './pages/Login';
 
 function App() {
+  useRegisterSW({
+    immediate: true,
+    onRegisteredSW(swUrl) {
+      console.log(`Service worker registered: ${swUrl}`);
+    },
+    onRegisterError(error) {
+      console.error('Service worker registration failed:', error);
+    },
+  });
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
@@ -17,6 +29,9 @@ function App() {
           <Link className="font-semibold text-slate-600" to="/login">
             Login
           </Link>
+          <Link className="font-semibold text-slate-600" to="/driver">
+            Driver View
+          </Link>
         </div>
       </nav>
 
@@ -24,6 +39,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/driver" element={<DriverView />} />
         </Routes>
       </main>
     </div>
