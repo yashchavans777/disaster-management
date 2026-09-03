@@ -10,7 +10,7 @@
     "backend": "node server.js",
     "frontend": "npm --prefix ../tourmitra-web-for-SIH- run dev",
     "fastapi": "uvicorn fastapi-server.main:app --reload --host 0.0.0.0 --port 8000",
-    "dev:all": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
     "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"python-ai/**/*.py\" \"server.js\"",
     "test": "echo \"No automated tests configured yet\"",
     "seed": "node src/utils/seed.js"
