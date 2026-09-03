@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * AI Route service.
  *
@@ -28,3 +29,6 @@ const calculateRouteRisk = async (weatherData = {}) => {
 };
 
 module.exports = { calculateRouteRisk };
+=======
+   // 
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Weather service.
  *
@@ -42,3 +43,6 @@ const getWeatherData = async (lat, lng) => {
 };
 
 module.exports = { getWeatherData };
+=======
+//
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Standard API response helpers.
  *
@@ -46,3 +47,6 @@ const sendError = (res, error = 'Internal Server Error', statusCode = 500) => {
 
 module.exports = { sendSuccess, sendError };
 
+=======
+ 
+>>>>>>> origin/main
