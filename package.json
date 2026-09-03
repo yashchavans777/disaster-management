@@ -2,7 +2,7 @@
   "name": "disaster-management",
   "version": "1.0.0",
   "description": "Smart Logistics Platform - SIH26002 backend and unified development workspace.",
-  "main": "server.js",
+  "main": "module.js",
   "directories": {
     "test": "tests"
   },
@@ -39,6 +39,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mongoose": "^9.9.4",
+    "node-cron": "^4.6.0",
     "socket.io": "^4.8.3"
   }
 }
