@@ -1,21 +1,16 @@
-<<<<<<< HEAD
 /**
  * AI Route service.
  *
  * Calculates a route risk level from weather data.
- * NOTE: This is a dummy/mock implementation for now — it will be
- * replaced by a real AI/ML scoring model in a later step.
+ * NOTE: This is a dummy/mock implementation for now.
  */
 
 /**
- * Calculate a (mock) route risk level from weather data.
+ * Calculate a route risk level from weather data.
  *
  * @async
- * @param {Object} [weatherData] - Weather data, e.g. from
- *   `weather.service.getWeatherData()`.
- * @param {number} [weatherData.windspeed=0] - Wind speed in km/h.
- * @param {number} [weatherData.rain=0] - Rain amount in mm.
- * @returns {Promise<'high'|'low'>} The route risk level.
+ * @param {Object} [weatherData={}] weather payload from weather service.
+ * @returns {Promise<'high'|'moderate'|'low'>}
  */
 const calculateRouteRisk = async (weatherData = {}) => {
   const windspeed = weatherData.windspeed ?? 0;
@@ -25,10 +20,11 @@ const calculateRouteRisk = async (weatherData = {}) => {
     return 'high';
   }
 
+  if (windspeed > 20 || rain > 20) {
+    return 'moderate';
+  }
+
   return 'low';
 };
 
 module.exports = { calculateRouteRisk };
-=======
-   // 
->>>>>>> origin/main
