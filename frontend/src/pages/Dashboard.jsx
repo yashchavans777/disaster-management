@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import apiClient from '../api/apiClient';
+import { getApiErrorMessage } from '../api/apiError';
+import Loader from '../components/Loader';
 import MapViewer from '../components/MapViewer';
 import ReportIncidentModal from '../components/ReportIncidentModal';
 
@@ -231,7 +233,8 @@ function Dashboard() {
     } catch (error) {
       const cachedShipments = readCachedShipments();
       setShipments(cachedShipments);
-      setErrorMessage(error.response?.data?.message || 'Failed to load active shipments.');
+      setErrorMessage('Unable to load live shipment data. Showing last cached snapshot if available.');
+      toast.error(getApiErrorMessage(error, 'Failed to fetch shipments. Please check network.'));
       return cachedShipments;
     } finally {
       setIsLoading(false);
@@ -251,8 +254,9 @@ function Dashboard() {
     for (const incident of queuedIncidents) {
       try {
         await apiClient.post('/incidents', incident);
-      } catch {
+      } catch (error) {
         failedIncidents.push(incident);
+        toast.error(getApiErrorMessage(error, 'Failed to sync offline incident report. Please check network.'));
       }
     }
 
@@ -345,22 +349,35 @@ function Dashboard() {
             return [route.id, { riskLevel: route.riskLevel || 'low' }];
           }
 
-          const response = await apiClient.post('/routes/evaluate-risk', { lat, lng });
-          const riskLevel = response.data?.data?.riskLevel || 'low';
+          try {
+            const response = await apiClient.post('/routes/evaluate-risk', { lat, lng });
+            const riskLevel = response.data?.data?.riskLevel || 'low';
 
-          return [
-            route.id,
-            {
-              riskLevel,
-              alternateCoordinates: riskLevel === 'high' ? buildAlternateRoute(route.coordinates) : null,
-            },
-          ];
+            return [
+              route.id,
+              {
+                riskLevel,
+                alternateCoordinates: riskLevel === 'high' ? buildAlternateRoute(route.coordinates) : null,
+              },
+            ];
+          } catch (error) {
+            toast.error(getApiErrorMessage(error, 'Failed to fetch routes. Please check network.'));
+
+            return [
+              route.id,
+              {
+                riskLevel: route.riskLevel || 'low',
+                alternateCoordinates: null,
+              },
+            ];
+          }
         })
       );
 
       setRouteRiskResults(Object.fromEntries(evaluationEntries));
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || 'Failed to evaluate route risks.');
+      setErrorMessage('Failed to evaluate route risks.');
+      toast.error(getApiErrorMessage(error, 'Failed to fetch routes. Please check network.'));
     } finally {
       setIsEvaluatingRisk(false);
     }
@@ -387,14 +404,14 @@ function Dashboard() {
     } catch (error) {
       const queuedIncidents = readQueuedIncidents();
       writeQueuedIncidents([...queuedIncidents, payload]);
-      toast.error(error.response?.data?.message || 'Failed to submit incident report. Saved for retry.');
+      toast.error(getApiErrorMessage(error, 'Failed to submit incident report. Saved for retry.'));
     } finally {
       setIsSubmittingIncident(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-full flex-col gap-6">
       <section className="rounded-xl bg-white p-8 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
         <p className="mt-3 text-slate-600">
@@ -402,7 +419,7 @@ function Dashboard() {
         </p>
       </section>
 
-      <section className="space-y-3">
+      <section className="flex flex-1 flex-col space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-900">Active Vehicle Map</h2>
@@ -434,13 +451,13 @@ function Dashboard() {
           </div>
         ) : null}
 
-        <div className="relative">
-          {isLoading ? (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500 shadow-sm">
-              Loading active shipments...
+        <div className="relative flex flex-1 flex-col">
+          {isLoading && activeVehicles.length === 0 ? (
+            <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-18rem)]">
+              <Loader label="Loading active shipments..." size="lg" />
             </div>
           ) : (
-            <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} />
+            <MapViewer activeVehicles={activeVehicles} routes={activeRoutes} isLoading={isLoading} />
           )}
 
           <button

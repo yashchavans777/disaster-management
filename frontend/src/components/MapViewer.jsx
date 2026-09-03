@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
 
+import Loader from './Loader';
+
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
 const riskColors = {
   low: '#16a34a',
@@ -81,7 +83,7 @@ const animateVehicleMovement = (vehicle, update, onFrame) => {
   return () => cancelAnimationFrame(animationFrameId);
 };
 
-function MapViewer({ activeVehicles = [], routes = [] }) {
+function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
@@ -144,12 +146,18 @@ function MapViewer({ activeVehicles = [], routes = [] }) {
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="relative flex min-h-[360px] flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-18rem)]">
+      {isLoading ? (
+        <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/85 backdrop-blur-sm">
+          <Loader label="Loading routes and shipments..." size="lg" />
+        </div>
+      ) : null}
+
       <MapContainer
         center={NORTH_EAST_INDIA_CENTER}
         zoom={7}
         scrollWheelZoom
-        className="h-[420px] w-full"
+        className="h-full min-h-[360px] w-full sm:min-h-[420px]"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
