@@ -1,6 +1,11 @@
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
 
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
+const riskColors = {
+  low: '#16a34a',
+  moderate: '#eab308',
+  high: '#dc2626',
+};
 
 function MapViewer({ activeVehicles = [], routes = [] }) {
   return (
@@ -20,7 +25,14 @@ function MapViewer({ activeVehicles = [], routes = [] }) {
           <Polyline
             key={route.id}
             positions={route.coordinates}
-            pathOptions={{ color: route.color || '#2563eb', weight: 4, opacity: 0.85 }}
+            pathOptions={{
+              color: route.isAlternate
+                ? '#2563eb'
+                : riskColors[route.riskLevel] || route.color || '#2563eb',
+              weight: route.isAlternate ? 3 : 4,
+              opacity: 0.85,
+              dashArray: route.isAlternate ? '10 8' : undefined,
+            }}
           />
         ))}
 

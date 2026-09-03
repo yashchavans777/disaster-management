@@ -16,8 +16,6 @@ const locationCoordinates = {
   dibrugarh: [27.4728, 94.912],
 };
 
-const routeColors = ['#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#dc2626'];
-
 const normalizeLocationKey = (value = '') => value.trim().toLowerCase();
 
 const getCoordinatesFromValue = (value) => {
@@ -96,7 +94,7 @@ const mapShipmentsToVehicles = (shipments) =>
 
 const mapShipmentsToRoutes = (shipments) =>
   shipments
-    .map((shipment, index) => {
+    .map((shipment) => {
       const routeCoordinates =
         shipment.routeCoordinates || shipment.route?.coordinates || shipment.route?.path || shipment.coordinates;
 
@@ -121,16 +119,40 @@ const mapShipmentsToRoutes = (shipments) =>
 
       return {
         id: shipment._id,
+        shipmentId: shipment._id,
         coordinates,
-        color: routeColors[index % routeColors.length],
+        riskLevel: shipment.route?.riskLevel || shipment.riskLevel || 'low',
+        label: `${shipment.origin} → ${shipment.destination}`,
       };
     })
     .filter(Boolean);
+
+const buildAlternateRoute = (coordinates) => {
+  if (!Array.isArray(coordinates) || coordinates.length < 2) {
+    return [];
+  }
+
+  const midpointIndex = Math.floor((coordinates.length - 1) / 2);
+  const midpoint = coordinates[midpointIndex];
+
+  if (!midpoint) {
+    return coordinates;
+  }
+
+  const alternateMidpoint = [
+    Number((midpoint[0] + 0.18).toFixed(4)),
+    Number((midpoint[1] + 0.22).toFixed(4)),
+  ];
+
+  return [coordinates[0], alternateMidpoint, coordinates[coordinates.length - 1]];
+};
 
 function Dashboard() {
   const [shipments, setShipments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
+  const [routeRiskResults, setRouteRiskResults] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -145,6 +167,7 @@ function Dashboard() {
 
         if (isMounted) {
           setShipments(shipmentData);
+          setRouteRiskResults({});
         }
       } catch (error) {
         if (isMounted) {
@@ -170,7 +193,73 @@ function Dashboard() {
   );
 
   const activeVehicles = useMemo(() => mapShipmentsToVehicles(activeShipments), [activeShipments]);
-  const activeRoutes = useMemo(() => mapShipmentsToRoutes(activeShipments), [activeShipments]);
+  const shipmentRoutes = useMemo(() => mapShipmentsToRoutes(activeShipments), [activeShipments]);
+  const activeRoutes = useMemo(
+    () =>
+      shipmentRoutes.flatMap((route) => {
+        const evaluation = routeRiskResults[route.id];
+        const resolvedRiskLevel = evaluation?.riskLevel || route.riskLevel || 'low';
+        const primaryRoute = {
+          ...route,
+          riskLevel: resolvedRiskLevel,
+        };
+
+        if (resolvedRiskLevel !== 'high') {
+          return [primaryRoute];
+        }
+
+        return [
+          primaryRoute,
+          {
+            id: `${route.id}-alternate`,
+            shipmentId: route.shipmentId,
+            coordinates: evaluation?.alternateCoordinates || buildAlternateRoute(route.coordinates),
+            riskLevel: 'low',
+            isAlternate: true,
+            label: `${route.label} (Alternate Route)`,
+          },
+        ];
+      }),
+    [shipmentRoutes, routeRiskResults]
+  );
+
+  const handleEvaluateRouteRisks = async () => {
+    if (!shipmentRoutes.length) {
+      return;
+    }
+
+    try {
+      setIsEvaluatingRisk(true);
+      setErrorMessage('');
+
+      const evaluationEntries = await Promise.all(
+        shipmentRoutes.map(async (route) => {
+          const [lat, lng] = route.coordinates[0] || [];
+
+          if (lat === undefined || lng === undefined) {
+            return [route.id, { riskLevel: route.riskLevel || 'low' }];
+          }
+
+          const response = await apiClient.post('/routes/evaluate-risk', { lat, lng });
+          const riskLevel = response.data?.data?.riskLevel || 'low';
+
+          return [
+            route.id,
+            {
+              riskLevel,
+              alternateCoordinates: riskLevel === 'high' ? buildAlternateRoute(route.coordinates) : null,
+            },
+          ];
+        })
+      );
+
+      setRouteRiskResults(Object.fromEntries(evaluationEntries));
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Failed to evaluate route risks.');
+    } finally {
+      setIsEvaluatingRisk(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -193,6 +282,17 @@ function Dashboard() {
           <div className="text-sm text-slate-500">
             Active shipments: <span className="font-semibold text-slate-700">{activeShipments.length}</span>
           </div>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={handleEvaluateRouteRisks}
+            disabled={isLoading || isEvaluatingRisk || shipmentRoutes.length === 0}
+            className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isEvaluatingRisk ? 'Evaluating...' : 'Evaluate Route Risks'}
+          </button>
         </div>
 
         {errorMessage ? (
