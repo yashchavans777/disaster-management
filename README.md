@@ -124,6 +124,33 @@ Additional API keys for weather, maps, Firebase, Redis, or AI services can be ad
 
 ## Running the Application
 
+### Run with Docker Compose
+
+From the root directory:
+
+```bash
+docker-compose up --build
+```
+
+This starts:
+
+- MongoDB on `mongodb://localhost:27017`
+- Node.js backend on `http://localhost:5000`
+- React frontend on `http://localhost:3000`
+- FastAPI AI service on `http://localhost:8000`
+
+Docker internal networking is configured so:
+
+- the backend connects to MongoDB using `mongodb`
+- the backend can reach the FastAPI service using `python-ai`
+- the frontend proxies `/api` and `/socket.io` traffic to `backend`
+
+To stop the stack:
+
+```bash
+docker-compose down
+```
+
 ### Start all services together
 
 From the root directory:
@@ -187,6 +214,13 @@ Example request body:
 ```txt
 GET http://localhost:8000/health
 ```
+
+## Docker Files Included
+
+- `Dockerfile` - Node.js backend image
+- `python-ai/Dockerfile` - FastAPI service image
+- `frontend/Dockerfile` - multi-stage React + Nginx image
+- `docker-compose.yml` - orchestrates MongoDB, backend, frontend, and FastAPI services
 
 ## Hackathon Impact
 
