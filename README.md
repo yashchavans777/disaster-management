@@ -180,7 +180,7 @@ docker-compose down
 From the root directory:
 
 ```bash
-npm run dev:all
+npm run dev
 ```
 
 This command starts:
