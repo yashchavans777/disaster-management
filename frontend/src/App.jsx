@@ -27,9 +27,15 @@ function App() {
       <aside className="border-b border-slate-200 bg-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
         <div className="flex h-full flex-col px-4 py-5 sm:px-6">
           <div className="px-2 pb-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Control Center</p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">Disaster Management</h1>
-            <p className="mt-2 text-sm text-slate-500">Monitor routes, drivers, and response activity in one place.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">
+              Control Center
+            </p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900">
+              Disaster Management
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Monitor routes, drivers, and response activity in one place.
+            </p>
           </div>
 
           <nav className="flex flex-1 flex-col gap-2">

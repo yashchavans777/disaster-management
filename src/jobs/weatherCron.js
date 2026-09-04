@@ -16,11 +16,10 @@ const buildHighRiskMessage = (shipment) => {
 };
 
 const processRouteWeatherRisk = async () => {
-  const activeRoutes = await Route.find({ isBlocked: false })
-    .populate({
-      path: 'shipmentId',
-      select: 'origin destination assignedDriver status',
-    });
+  const activeRoutes = await Route.find({ isBlocked: false }).populate({
+    path: 'shipmentId',
+    select: 'origin destination assignedDriver status',
+  });
 
   for (const route of activeRoutes) {
     if (!route.shipmentId || route.shipmentId.status === 'delivered') {
@@ -28,7 +27,10 @@ const processRouteWeatherRisk = async () => {
       continue;
     }
 
-    const shipment = route.shipmentId instanceof Shipment ? route.shipmentId : route.shipmentId;
+    const shipment =
+      route.shipmentId instanceof Shipment
+        ? route.shipmentId
+        : route.shipmentId;
     const assignedDriver = shipment?.assignedDriver;
     const [firstWaypoint] = route.waypoints || [];
 
@@ -37,7 +39,10 @@ const processRouteWeatherRisk = async () => {
       continue;
     }
 
-    const weatherData = await weatherService.getWeatherData(firstWaypoint.lat, firstWaypoint.lng);
+    const weatherData = await weatherService.getWeatherData(
+      firstWaypoint.lat,
+      firstWaypoint.lng
+    );
     const riskLevel = await aiRouteService.calculateRouteRisk(weatherData);
 
     if (route.riskLevel !== riskLevel) {

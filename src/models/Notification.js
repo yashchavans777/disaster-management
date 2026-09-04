@@ -23,6 +23,15 @@ const notificationSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // Alias for API consistency
+    read: {
+      type: Boolean,
+      default: false,
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,
@@ -30,4 +39,5 @@ const notificationSchema = new Schema(
 );
 
 module.exports =
-  mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+  mongoose.models.Notification ||
+  mongoose.model('Notification', notificationSchema);

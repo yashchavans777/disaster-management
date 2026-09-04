@@ -8,10 +8,18 @@
   },
   "scripts": {
     "backend": "node server.js",
+<<<<<<< HEAD
     "frontend": "npm --prefix ../tourmitra-web-for-SIH- run dev",
     "fastapi": "uvicorn fastapi-server.main:app --reload --host 0.0.0.0 --port 8000",
     "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
     "format": "npx prettier --write \"src/**/*.js\" \"fastapi-server/**/*.py\" \"server.js\"",
+=======
+    "frontend": "npm --prefix frontend run dev",
+    "fastapi": "/opt/miniconda3/bin/python3 -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
+    "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "setup:python": "/opt/miniconda3/bin/pip3 install -r fastapi-server/requirements.txt",
+    "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"python-ai/**/*.py\" \"server.js\"",
+>>>>>>> 1de1d82aff83792732804d72e567221e8abbe193
     "test": "echo \"No automated tests configured yet\"",
     "seed": "node src/utils/seed.js"
   },
@@ -38,6 +46,7 @@
     "prettier": "^3.3.3"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mongoose": "^9.9.4",
