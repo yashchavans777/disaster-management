@@ -89,13 +89,15 @@ export default defineConfig({
             },
           },
           {
-            // Cache OpenStreetMap tiles for offline map support
-            urlPattern: ({ url }) => url.hostname.endsWith('tile.openstreetmap.org'),
+            // Cache map tiles for offline map support (CartoDB Voyager + OSM)
+            urlPattern: ({ url }) =>
+              url.hostname.endsWith('basemaps.cartocdn.com') ||
+              url.hostname.endsWith('tile.openstreetmap.org'),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'osm-tiles-cache',
+              cacheName: 'map-tiles-cache',
               expiration: {
-                maxEntries: 500,
+                maxEntries: 1000,
                 maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
               },
               cacheableResponse: {

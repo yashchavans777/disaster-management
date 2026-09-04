@@ -274,10 +274,10 @@ function CityDetailMap({ selectedCity = 'Silchar, Assam' }) {
         >
           <CityBoundaryController bounds={cityBounds} center={cityCenter} />
 
-          {/* High-resolution OpenStreetMap TileLayer for crisp street layout */}
+          {/* High-resolution CartoDB Voyager English TileLayer for crisp street layout */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             maxZoom={19}
           />
 
