@@ -239,6 +239,18 @@ def _answer_from_silchar_context(question: str, context: str) -> str:
             + "\n\n💡 Operations Tip: These corridors are particularly vulnerable during the monsoon season (May to September). Continuous weather monitoring and alternate route planning are strongly recommended."
         )
 
+    if any(w in q for w in ["hi", "hello", "hey", "who are you", "what can you do"]):
+        return (
+            "Hello! I am Logi-Assistant, your intelligent AI companion for the North East Region Disaster Management & Smart Logistics platform. "
+            "I can assist you with real-time route risk assessments, historical flood & landslide analyses across Silchar and the NER, vehicle dispatch tracking, and emergency logistics planning. How can I help you today?"
+        )
+
+    if any(w in q for w in ["useful", "why", "platform", "purpose", "features"]):
+        return (
+            "This Smart Logistics & Disaster Management platform (SIH26002) is designed to ensure uninterrupted relief supplies across the challenging terrain of North East India. "
+            "It combines real-time IoT vehicle tracking, A* terrain routing, AI-driven weather and flood risk prediction, and hyper-local city boundary monitoring to keep drivers and rescue teams safe."
+        )
+
     return ""
 
 
@@ -394,13 +406,16 @@ async def rag_query(req: RagQueryRequest):
     # Read context from data/silchar_history.txt
     silchar_history = _load_silchar_history()
 
-    # Construct conversational prompt grounded in verified historical context:
+    # Construct highly flexible conversational prompt:
     prompt = (
-        f"You are 'Logi-Assistant', an intelligent Logistics & Disaster Management AI for the North East Region. "
-        f"Answer the user's question conversationally and concisely. "
-        f"Use this historical context to inform your answer: {silchar_history}\n\n"
+        "You are 'Logi-Assistant', a helpful and intelligent AI companion for a Logistics & Disaster Management platform in the North East Region (NER).\n\n"
+        "CRITICAL INSTRUCTIONS:\n"
+        "1. You must answer EVERY question the user asks intelligently and conversationally.\n"
+        f"2. If the user's question is about historical floods or landslides in Silchar, incorporate this specific context: {silchar_history}\n"
+        "3. If the user asks about ANYTHING ELSE (e.g., weather, general knowledge, why this platform is useful, greetings, or random questions), use your vast general knowledge to provide a highly relevant, helpful, and friendly answer.\n"
+        "4. Never say you cannot answer. Always respond naturally to whatever the user says.\n\n"
         f"User Question: {user_query}\n"
-        f"Answer:"
+        "Answer:"
     )
 
     answer = None
