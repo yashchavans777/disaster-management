@@ -427,7 +427,7 @@ async def rag_query(req: RagQueryRequest):
         try:
             genai.configure(api_key=gemini_key)
             model = None
-            for model_name in ["gemini-1.5-flash", "gemini-flash-latest", "gemini-3.6-flash", "gemini-2.5-flash"]:
+            for model_name in ["gemini-3.6-flash", "gemini-flash-latest", "gemini-1.5-flash", "gemini-2.5-flash"]:
                 try:
                     m = genai.GenerativeModel(model_name)
                     res = await m.generate_content_async(prompt)
