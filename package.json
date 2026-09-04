@@ -9,8 +9,9 @@
   "scripts": {
     "backend": "node server.js",
     "frontend": "npm --prefix frontend run dev",
-    "fastapi": "python3 -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
+    "fastapi": "/opt/miniconda3/bin/python3 -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
     "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "setup:python": "/opt/miniconda3/bin/pip3 install -r fastapi-server/requirements.txt",
     "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"python-ai/**/*.py\" \"server.js\"",
     "test": "echo \"No automated tests configured yet\"",
     "seed": "node src/utils/seed.js"
