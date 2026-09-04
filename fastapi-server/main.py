@@ -27,12 +27,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# Explicitly load .env from the parent directory (root)
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(parent_dir, '.env'))
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
-
-# Configure Google Gemini SDK from environment variable
+# Load .env from the parent directory
+__dirname = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(os.path.dirname(__dirname), '.env'))
+load_dotenv(os.path.join(__dirname, '.env'))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     try:
