@@ -18,6 +18,8 @@ import Loader from '../components/Loader';
 import MapViewer from '../components/MapViewer';
 import ReportIncidentModal from '../components/ReportIncidentModal';
 import WeatherWidget from '../components/WeatherWidget';
+import RoutePlanner from '../components/RoutePlanner';
+import CityDetailMap from '../components/CityDetailMap';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
@@ -482,6 +484,8 @@ function Dashboard() {
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+  const [plannerRoute, setPlannerRoute] = useState(null);
+  const [selectedCity, setSelectedCity] = useState('Silchar, Assam');
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -839,6 +843,7 @@ function Dashboard() {
         ) : null}
 
         <div className="relative flex flex-1 flex-col">
+          <RoutePlanner onRouteCalculated={setPlannerRoute} />
           {isLoading && activeVehicles.length === 0 ? (
             <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-24rem)]">
               <Loader label="Loading active shipments..." size="lg" />
@@ -848,6 +853,7 @@ function Dashboard() {
               activeVehicles={activeVehicles}
               routes={activeRoutes}
               isLoading={isLoading}
+              plannerRoute={plannerRoute}
             />
           )}
 
@@ -860,6 +866,43 @@ function Dashboard() {
             <span className="text-3xl leading-none">+</span>
           </button>
         </div>
+      </section>
+
+      {/* Hyper-Local City View Section */}
+      <section className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <span>🏙️</span> Hyper-Local City View
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Street-level focus and administrative boundary isolation for emergency operations.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="city-focus-select"
+              className="text-xs font-semibold uppercase tracking-wider text-slate-500"
+            >
+              Select City:
+            </label>
+            <select
+              id="city-focus-select"
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-800 shadow-xs transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="Tawang, Arunachal Pradesh">Tawang, Arunachal Pradesh</option>
+              <option value="Silchar, Assam">Silchar, Assam</option>
+              <option value="Aizawl, Mizoram">Aizawl, Mizoram</option>
+              <option value="Guwahati, Assam">Guwahati, Assam</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Hyper-Local Street Map with Boundary Isolation */}
+        <CityDetailMap selectedCity={selectedCity} />
       </section>
 
       <ReportIncidentModal

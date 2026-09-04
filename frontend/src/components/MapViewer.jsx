@@ -118,7 +118,31 @@ const animateVehicleMovement = (vehicle, update, onFrame) => {
   return () => cancelAnimationFrame(animationFrameId);
 };
 
-function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
+import { useMap } from 'react-leaflet';
+
+const NER_BOUNDS = [
+  [21.0, 89.0], // SouthWest
+  [29.5, 97.5], // NorthEast
+];
+const SILCHAR_CENTER = [24.82, 92.8];
+
+// Sub-component to handle map flyToBounds
+function MapController({ boundsToFit }) {
+  const map = useMap();
+  useEffect(() => {
+    if (boundsToFit && boundsToFit.length > 0) {
+      map.flyToBounds(boundsToFit, { padding: [50, 50], duration: 1.5 });
+    }
+  }, [boundsToFit, map]);
+  return null;
+}
+
+function MapViewer({
+  activeVehicles = [],
+  routes = [],
+  isLoading = false,
+  plannerRoute = null,
+}) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
@@ -207,11 +231,18 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
       ) : null}
 
       <MapContainer
-        center={NORTH_EAST_INDIA_CENTER}
+        center={SILCHAR_CENTER}
         zoom={7}
+        minZoom={6}
+        maxZoom={18}
+        maxBounds={NER_BOUNDS}
+        zoomAnimation={true}
+        fadeAnimation={true}
         scrollWheelZoom
         className="h-full min-h-[360px] w-full sm:min-h-[420px]"
       >
+        <MapController boundsToFit={plannerRoute?.bounds} />
+
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -231,6 +262,43 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
             }}
           />
         ))}
+
+        {plannerRoute && (
+          <>
+            {/* Primary Route */}
+            <Polyline
+              positions={plannerRoute.coordinates}
+              pathOptions={{
+                color: plannerRoute.isSafe ? '#10b981' : '#ef4444', // Green if safe, Red if risky
+                weight: 5,
+                opacity: 0.9,
+              }}
+            />
+            {/* Alternate Route if Risky */}
+            {!plannerRoute.isSafe && plannerRoute.alternateCoordinates && (
+              <Polyline
+                positions={plannerRoute.alternateCoordinates}
+                pathOptions={{
+                  color: '#f59e0b', // Orange for alternate
+                  weight: 4,
+                  opacity: 0.8,
+                  dashArray: '10 8',
+                }}
+              />
+            )}
+            {/* Start and End Markers */}
+            <Marker position={plannerRoute.coordinates[0]}>
+              <Popup>Start: {plannerRoute.startName}</Popup>
+            </Marker>
+            <Marker
+              position={
+                plannerRoute.coordinates[plannerRoute.coordinates.length - 1]
+              }
+            >
+              <Popup>End: {plannerRoute.endName}</Popup>
+            </Marker>
+          </>
+        )}
 
         {visibleVehicles.map((vehicle) => (
           <Marker
