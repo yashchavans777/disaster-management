@@ -11,7 +11,7 @@ const riskColors = {
   high: '#dc2626',
 };
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
 const ANIMATION_DURATION_MS = 900;
 
 const getVehicleKeys = (vehicle = {}) =>
