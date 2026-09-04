@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import apiClient from '../api/apiClient';
 import { getApiErrorMessage } from '../api/apiError';
@@ -9,6 +10,15 @@ import ReportIncidentModal from '../components/ReportIncidentModal';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
+
+// ── Chart colours matching risk scheme ───────────────────────────────────────
+const STATUS_COLORS = {
+  'in-transit': '#2563eb',
+  pending: '#eab308',
+  assigned: '#8b5cf6',
+  delivered: '#16a34a',
+  delayed: '#dc2626',
+};
 
 const locationCoordinates = {
   guwahati: [26.1445, 91.7362],
@@ -56,9 +66,7 @@ const buildVehicleCoordinates = (shipment, originCoordinates, destinationCoordin
     getCoordinatesFromValue(shipment?.vehicle?.currentLocation) ||
     getCoordinatesFromValue(shipment?.vehicle?.location);
 
-  if (vehicleLocation) {
-    return vehicleLocation;
-  }
+  if (vehicleLocation) return vehicleLocation;
 
   if (originCoordinates && destinationCoordinates) {
     return [
@@ -78,9 +86,7 @@ const mapShipmentsToVehicles = (shipments) =>
         getCoordinatesFromValue(shipment.destinationCoordinates) || getCoordinatesFromValue(shipment.destination);
       const vehicleCoordinates = buildVehicleCoordinates(shipment, originCoordinates, destinationCoordinates);
 
-      if (!vehicleCoordinates) {
-        return null;
-      }
+      if (!vehicleCoordinates) return null;
 
       const driver = shipment.assignedDriver || shipment.driver;
       const vehicle = shipment.assignedVehicle || shipment.vehicle;
@@ -109,9 +115,7 @@ const mapShipmentsToRoutes = (shipments) =>
         shipment.routeCoordinates || shipment.route?.coordinates || shipment.route?.path || shipment.coordinates;
 
       const normalizedRouteCoordinates = Array.isArray(routeCoordinates)
-        ? routeCoordinates
-            .map((coordinate) => getCoordinatesFromValue(coordinate))
-            .filter(Boolean)
+        ? routeCoordinates.map((coordinate) => getCoordinatesFromValue(coordinate)).filter(Boolean)
         : [];
 
       const originCoordinates = getCoordinatesFromValue(shipment.originCoordinates) || getCoordinatesFromValue(shipment.origin);
@@ -123,9 +127,7 @@ const mapShipmentsToRoutes = (shipments) =>
           ? normalizedRouteCoordinates
           : [originCoordinates, destinationCoordinates].filter(Boolean);
 
-      if (coordinates.length < 2) {
-        return null;
-      }
+      if (coordinates.length < 2) return null;
 
       return {
         id: shipment._id,
@@ -138,16 +140,12 @@ const mapShipmentsToRoutes = (shipments) =>
     .filter(Boolean);
 
 const buildAlternateRoute = (coordinates) => {
-  if (!Array.isArray(coordinates) || coordinates.length < 2) {
-    return [];
-  }
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return [];
 
   const midpointIndex = Math.floor((coordinates.length - 1) / 2);
   const midpoint = coordinates[midpointIndex];
 
-  if (!midpoint) {
-    return coordinates;
-  }
+  if (!midpoint) return coordinates;
 
   const alternateMidpoint = [
     Number((midpoint[0] + 0.18).toFixed(4)),
@@ -160,11 +158,7 @@ const buildAlternateRoute = (coordinates) => {
 const readCachedShipments = () => {
   try {
     const cachedValue = localStorage.getItem(SHIPMENTS_CACHE_KEY);
-
-    if (!cachedValue) {
-      return [];
-    }
-
+    if (!cachedValue) return [];
     const parsedValue = JSON.parse(cachedValue);
     return Array.isArray(parsedValue) ? parsedValue : [];
   } catch {
@@ -179,11 +173,7 @@ const cacheShipments = (shipments) => {
 const readQueuedIncidents = () => {
   try {
     const cachedValue = localStorage.getItem(INCIDENT_QUEUE_KEY);
-
-    if (!cachedValue) {
-      return [];
-    }
-
+    if (!cachedValue) return [];
     const parsedValue = JSON.parse(cachedValue);
     return Array.isArray(parsedValue) ? parsedValue : [];
   } catch {
@@ -208,6 +198,204 @@ const buildIncidentPayload = ({ type, description, latitude, longitude }) => ({
   status: 'reported',
 });
 
+// ── AI Assistant Chat Panel ───────────────────────────────────────────────────
+function AiAssistantPanel({ isOpen, onClose }) {
+  const [query, setQuery] = useState('');
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: 'Hello! I can answer questions about recent incidents, route risks, and logistics. Try: "Analyze recent road blockages" or "How many high-severity incidents?"' },
+  ]);
+  const [isQuerying, setIsQuerying] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    const question = query.trim();
+    if (!question) return;
+
+    setMessages((m) => [...m, { role: 'user', text: question }]);
+    setQuery('');
+    setIsQuerying(true);
+
+    try {
+      const response = await apiClient.post('/ai/rag-query', { question });
+      const answer = response.data?.data?.answer || 'No answer returned from AI service.';
+      const source = response.data?.data?.source || '';
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          text: answer,
+          meta: source.includes('fallback') ? '⚡ Local RAG fallback' : '🤖 FastAPI RAG',
+        },
+      ]);
+    } catch (error) {
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', text: `Error: ${getApiErrorMessage(error, 'RAG query failed. Please check the AI service.')}`, isError: true },
+      ]);
+    } finally {
+      setIsQuerying(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-y-0 right-0 z-[900] flex w-full max-w-sm flex-col border-l border-slate-200 bg-white shadow-2xl">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold text-white">🤖 AI Operations Assistant</h2>
+          <p className="text-xs text-blue-100">RAG-powered — asks about real incident data</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1.5 text-blue-100 transition hover:bg-white/20"
+          aria-label="Close AI assistant"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        {messages.map((message, i) => (
+          <div
+            key={i}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                message.role === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : message.isError
+                  ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                  : 'bg-slate-100 text-slate-800'
+              }`}
+            >
+              <p>{message.text}</p>
+              {message.meta && (
+                <p className="mt-1 text-xs text-slate-400">{message.meta}</p>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {isQuerying && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
+              <span className="animate-pulse">Thinking…</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <form onSubmit={handleAsk} className="border-t border-slate-200 px-3 py-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ask about incidents, risks, routes…"
+            disabled={isQuerying}
+            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+          />
+          <button
+            type="submit"
+            disabled={isQuerying || !query.trim()}
+            className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            Ask
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Analytics Charts Section ──────────────────────────────────────────────────
+function AnalyticsSection({ shipments }) {
+  const chartData = useMemo(() => {
+    const counts = {};
+    for (const s of shipments) {
+      counts[s.status] = (counts[s.status] || 0) + 1;
+    }
+    return Object.entries(counts).map(([status, count]) => ({ status, count }));
+  }, [shipments]);
+
+  if (!chartData.length) return null;
+
+  return (
+    <section className="rounded-xl bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-lg font-semibold text-slate-900">Shipment Analytics</h2>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Bar chart */}
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Status Breakdown</p>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <XAxis dataKey="status" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                formatter={(v) => [v, 'Shipments']}
+              />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#94a3b8'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Pie chart */}
+        <div className="flex flex-col items-center">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Distribution</p>
+          <ResponsiveContainer width="100%" height={160}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="count"
+                nameKey="status"
+                cx="50%"
+                cy="50%"
+                outerRadius={60}
+                innerRadius={30}
+                paddingAngle={2}
+              >
+                {chartData.map((entry) => (
+                  <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#94a3b8'} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                formatter={(v, name) => [v, name]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+            {chartData.map((entry) => (
+              <span key={entry.status} className="flex items-center gap-1 text-xs text-slate-600">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: STATUS_COLORS[entry.status] || '#94a3b8' }}
+                />
+                {entry.status}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 function Dashboard() {
   const [shipments, setShipments] = useState(() => readCachedShipments());
   const [isLoading, setIsLoading] = useState(() => readCachedShipments().length === 0);
@@ -216,6 +404,7 @@ function Dashboard() {
   const [routeRiskResults, setRouteRiskResults] = useState({});
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -277,9 +466,7 @@ function Dashboard() {
 
   useEffect(() => {
     const handleOffline = () => {
-      toast('You are offline. Data is cached locally.', {
-        icon: '📡',
-      });
+      toast('You are offline. Data is cached locally.', { icon: '📡' });
     };
 
     const handleOnline = async () => {
@@ -308,14 +495,9 @@ function Dashboard() {
       shipmentRoutes.flatMap((route) => {
         const evaluation = routeRiskResults[route.id];
         const resolvedRiskLevel = evaluation?.riskLevel || route.riskLevel || 'low';
-        const primaryRoute = {
-          ...route,
-          riskLevel: resolvedRiskLevel,
-        };
+        const primaryRoute = { ...route, riskLevel: resolvedRiskLevel };
 
-        if (resolvedRiskLevel !== 'high') {
-          return [primaryRoute];
-        }
+        if (resolvedRiskLevel !== 'high') return [primaryRoute];
 
         return [
           primaryRoute,
@@ -333,9 +515,7 @@ function Dashboard() {
   );
 
   const handleEvaluateRouteRisks = async () => {
-    if (!shipmentRoutes.length) {
-      return;
-    }
+    if (!shipmentRoutes.length) return;
 
     try {
       setIsEvaluatingRisk(true);
@@ -350,8 +530,8 @@ function Dashboard() {
           }
 
           try {
-            const response = await apiClient.post('/routes/evaluate-risk', { lat, lng });
-            const riskLevel = response.data?.data?.riskLevel || 'low';
+            const response = await apiClient.post('/ai/predict-risk', { lat, lng });
+            const riskLevel = response.data?.data?.risk_level || response.data?.data?.riskLevel || 'low';
 
             return [
               route.id,
@@ -361,15 +541,15 @@ function Dashboard() {
               },
             ];
           } catch (error) {
-            toast.error(getApiErrorMessage(error, 'Failed to fetch routes. Please check network.'));
-
-            return [
-              route.id,
-              {
-                riskLevel: route.riskLevel || 'low',
-                alternateCoordinates: null,
-              },
-            ];
+            // Fallback: try the original route risk endpoint
+            try {
+              const fallback = await apiClient.post('/routes/evaluate-risk', { lat, lng });
+              const riskLevel = fallback.data?.data?.riskLevel || 'low';
+              return [route.id, { riskLevel, alternateCoordinates: riskLevel === 'high' ? buildAlternateRoute(route.coordinates) : null }];
+            } catch {
+              toast.error(getApiErrorMessage(error, 'Failed to evaluate route risk.'));
+              return [route.id, { riskLevel: route.riskLevel || 'low', alternateCoordinates: null }];
+            }
           }
         })
       );
@@ -389,9 +569,7 @@ function Dashboard() {
     if (!navigator.onLine) {
       const queuedIncidents = readQueuedIncidents();
       writeQueuedIncidents([...queuedIncidents, payload]);
-      toast('You are offline. Data is cached locally.', {
-        icon: '📡',
-      });
+      toast('You are offline. Incident saved for later sync.', { icon: '📡' });
       setIsIncidentModalOpen(false);
       return;
     }
@@ -399,7 +577,7 @@ function Dashboard() {
     try {
       setIsSubmittingIncident(true);
       await apiClient.post('/incidents', payload);
-      toast.success('Incident report submitted successfully.');
+      toast.success('Incident reported. Agentic loop triggered — monitoring for rerouting...');
       setIsIncidentModalOpen(false);
     } catch (error) {
       const queuedIncidents = readQueuedIncidents();
@@ -412,13 +590,30 @@ function Dashboard() {
 
   return (
     <div className="flex min-h-full flex-col gap-6">
+      {/* Header */}
       <section className="rounded-xl bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-3 text-slate-600">
-          Monitor active relief vehicles across the North Eastern Region of India.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+            <p className="mt-3 text-slate-600">
+              Monitor active relief vehicles across the North Eastern Region of India.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsAiPanelOpen((o) => !o)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            title="Open AI Operations Assistant"
+          >
+            🤖 <span className="hidden sm:inline">AI Assistant</span>
+          </button>
+        </div>
       </section>
 
+      {/* Analytics */}
+      <AnalyticsSection shipments={shipments} />
+
+      {/* Map Section */}
       <section className="flex flex-1 flex-col space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
@@ -440,9 +635,28 @@ function Dashboard() {
             disabled={isLoading || isEvaluatingRisk || shipmentRoutes.length === 0}
             className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isEvaluatingRisk ? 'Evaluating...' : 'Evaluate Route Risks'}
+            {isEvaluatingRisk ? 'Evaluating...' : '🧠 Evaluate Route Risks (DL)'}
           </button>
 
+          <button
+            type="button"
+            onClick={fetchShipments}
+            disabled={isLoading}
+            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            {isLoading ? 'Refreshing...' : '↻ Refresh'}
+          </button>
+        </div>
+
+        {/* Map Legend */}
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-green-500" /> Low Risk</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-yellow-400" /> Moderate Risk</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-red-600" /> High Risk</span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-px w-5 border-b-2 border-dashed border-blue-500" />
+            Alternate Route
+          </span>
         </div>
 
         {errorMessage ? (
@@ -453,7 +667,7 @@ function Dashboard() {
 
         <div className="relative flex flex-1 flex-col">
           {isLoading && activeVehicles.length === 0 ? (
-            <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-18rem)]">
+            <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-24rem)]">
               <Loader label="Loading active shipments..." size="lg" />
             </div>
           ) : (
@@ -477,6 +691,8 @@ function Dashboard() {
         onClose={() => setIsIncidentModalOpen(false)}
         onSubmit={handleReportIncident}
       />
+
+      <AiAssistantPanel isOpen={isAiPanelOpen} onClose={() => setIsAiPanelOpen(false)} />
     </div>
   );
 }
