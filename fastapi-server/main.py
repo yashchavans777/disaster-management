@@ -27,10 +27,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# Load environment from both local and root .env files
-_SERVER_DIR = Path(__file__).resolve().parent
-load_dotenv(_SERVER_DIR / ".env")
-load_dotenv(_SERVER_DIR.parent / ".env")
+# Explicitly load .env from the parent directory (root)
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(parent_dir, '.env'))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 # Configure Google Gemini SDK from environment variable
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -229,14 +229,16 @@ def _answer_from_silchar_context(question: str, context: str) -> str:
 
     if matches:
         return (
-            "Based on the historical disaster knowledge base for Silchar and NER:\n\n"
+            "Here is what the historical disaster records show regarding your query:\n\n"
             + "\n\n".join(matches)
+            + "\n\n💡 Logistics Advisory: If routing relief shipments through these sectors, make sure to verify bridge and rail clearances with local control rooms, as heavy rainfall can trigger rapid reactivation of these vulnerabilities."
         )
 
     if any(w in q for w in ["silchar", "history", "disaster", "past", "historical", "overview", "what happened"]):
         return (
-            "Based on the official historical disaster records for Silchar and NER:\n\n"
+            "Hello! Here is a summary of the major recorded disaster incidents and critical logistical bottlenecks in Silchar and the NER region:\n\n"
             + context
+            + "\n\n💡 Operations Tip: These corridors are particularly vulnerable during the monsoon season (May to September). Continuous weather monitoring and alternate route planning are strongly recommended."
         )
 
     return ""
@@ -394,11 +396,13 @@ async def rag_query(req: RagQueryRequest):
     # Read context from data/silchar_history.txt
     silchar_history = _load_silchar_history()
 
-    # Construct the exact prompt specified:
+    # Construct conversational prompt grounded in verified historical context:
     prompt = (
-        f"You are a Logistics AI for the North East Region. "
-        f"Use ONLY this context to answer the user: {silchar_history}. "
-        f"User Question: {user_query}"
+        f"You are 'Logi-Assistant', an intelligent Logistics & Disaster Management AI for the North East Region. "
+        f"Answer the user's question conversationally and concisely. "
+        f"Use this historical context to inform your answer: {silchar_history}\n\n"
+        f"User Question: {user_query}\n"
+        f"Answer:"
     )
 
     answer = None
@@ -409,17 +413,18 @@ async def rag_query(req: RagQueryRequest):
     if gemini_key:
         try:
             genai.configure(api_key=gemini_key)
-            try:
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                response = await model.generate_content_async(prompt)
-            except Exception as e_flash15:
-                # Fallback to current generation flash model if 1.5 is 404
-                model = genai.GenerativeModel("gemini-2.5-flash")
-                response = await model.generate_content_async(prompt)
-
-            if response and hasattr(response, "text") and response.text:
-                answer = response.text.strip()
-                llm_provider = f"google-gemini ({model.model_name})"
+            model = None
+            for model_name in ["gemini-1.5-flash", "gemini-flash-latest", "gemini-3.6-flash", "gemini-2.5-flash"]:
+                try:
+                    m = genai.GenerativeModel(model_name)
+                    res = await m.generate_content_async(prompt)
+                    if res and hasattr(res, "text") and res.text:
+                        answer = res.text.strip()
+                        llm_provider = f"google-gemini ({model_name})"
+                        break
+                except Exception as m_err:
+                    print(f"Gemini model {model_name} attempt error: {m_err}")
+                    continue
         except Exception as exc:
             print(f"Google Gemini SDK call error: {exc}")
 
