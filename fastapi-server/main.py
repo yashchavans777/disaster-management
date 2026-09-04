@@ -1,12 +1,13 @@
 """
 Smart Logistics Platform — FastAPI AI Microservice
 ===================================================
-Provides four AI endpoints for the SIH26002 prototype:
+Provides five AI/data endpoints for the SIH26002 prototype:
 
-  POST /predict-risk   — Deep Learning sigmoid risk predictor
-  POST /rag-query      — RAG-powered admin assistant (retrieves incidents, generates answer)
-  POST /graph-route    — A* pathfinding over the NER city graph
-  POST /agentic-loop   — Full autonomous pipeline: incident → DL → route → broadcast payload
+  POST /predict-risk      — Deep Learning sigmoid risk predictor
+  POST /rag-query         — RAG-powered admin assistant (retrieves incidents, generates answer)
+  POST /graph-route       — A* pathfinding over the NER city graph
+  POST /agentic-loop      — Full autonomous pipeline: incident → DL → route → broadcast payload
+  GET  /api/weather/silchar — Live weather + 2-day forecast for Silchar, Assam (Open-Meteo, no key)
 
 All endpoints degrade gracefully if upstream services (Open-Meteo, Node.js API) are unavailable.
 """
@@ -440,4 +441,188 @@ async def agentic_loop(req: AgenticLoopRequest):
             "triggeredAt": time.time(),
         },
         "pipeline": "agentic-loop-v2",
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── SILCHAR LIVE WEATHER + 2-DAY FORECAST  ────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+SILCHAR_LAT = 24.82
+SILCHAR_LON = 92.80
+RAIN_PROBABILITY_THRESHOLD = 50  # %
+
+# WMO Weather Interpretation Codes → human-readable label + emoji
+# https://open-meteo.com/en/docs#weathervariables
+_WMO_LABELS: dict[int, tuple[str, str]] = {
+    0:  ("Clear Sky",              "☀️"),
+    1:  ("Mainly Clear",           "🌤️"),
+    2:  ("Partly Cloudy",          "⛅"),
+    3:  ("Overcast",               "☁️"),
+    45: ("Fog",                    "🌫️"),
+    48: ("Icy Fog",                "🌫️"),
+    51: ("Light Drizzle",          "🌦️"),
+    53: ("Moderate Drizzle",       "🌦️"),
+    55: ("Heavy Drizzle",          "🌧️"),
+    61: ("Slight Rain",            "🌧️"),
+    63: ("Moderate Rain",          "🌧️"),
+    65: ("Heavy Rain",             "🌧️"),
+    66: ("Freezing Rain",          "🌨️"),
+    67: ("Heavy Freezing Rain",    "🌨️"),
+    71: ("Slight Snowfall",        "❄️"),
+    73: ("Moderate Snowfall",      "❄️"),
+    75: ("Heavy Snowfall",         "❄️"),
+    77: ("Snow Grains",            "❄️"),
+    80: ("Slight Rain Showers",    "🌦️"),
+    81: ("Moderate Rain Showers",  "🌧️"),
+    82: ("Heavy Rain Showers",     "⛈️"),
+    85: ("Slight Snow Showers",    "🌨️"),
+    86: ("Heavy Snow Showers",     "🌨️"),
+    95: ("Thunderstorm",           "⛈️"),
+    96: ("Thunderstorm + Hail",    "⛈️"),
+    99: ("Thunderstorm + Heavy Hail", "⛈️"),
+}
+
+
+def _wmo_info(code: int) -> tuple[str, str]:
+    """Return (label, emoji) for a WMO weather code, with a safe fallback."""
+    return _WMO_LABELS.get(code, ("Unknown", "🌡️"))
+
+
+def _is_rainy_code(code: int) -> bool:
+    """Return True if the WMO code represents any rain/storm condition."""
+    return code in {
+        51, 53, 55, 61, 63, 65, 66, 67,
+        80, 81, 82, 95, 96, 99,
+    }
+
+
+@app.get("/api/weather/silchar")
+async def get_silchar_weather():
+    """
+    Fetches live weather + 2-day forecast for Silchar, Assam from Open-Meteo.
+
+    Returns:
+        - current: temperature_2m, weather_code, condition label, emoji
+        - forecast: list of next 2 days with date, max precipitation probability,
+                    daily weather code, condition, emoji
+        - rain_expected_in_next_48h: True if any day in next 2 has precip_prob > 50 %
+                                     OR current WMO code is a rain code
+        - risk_advisory: human-readable flood risk message
+        - fetched_at: Unix timestamp
+    """
+    open_meteo_url = (
+        f"{OPEN_METEO_URL}"
+        f"?latitude={SILCHAR_LAT}"
+        f"&longitude={SILCHAR_LON}"
+        f"&current=temperature_2m,weather_code"
+        f"&daily=precipitation_probability_max,weather_code,temperature_2m_max,temperature_2m_min"
+        f"&timezone=auto"
+        f"&forecast_days=3"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(open_meteo_url)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Open-Meteo API timed out. Please retry.")
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Open-Meteo returned HTTP {exc.response.status_code}",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Weather fetch failed: {str(exc)}")
+
+    # ── Parse current conditions ──────────────────────────────────────────────
+    current_raw   = data.get("current", {})
+    current_temp  = current_raw.get("temperature_2m")
+    current_code  = current_raw.get("weather_code", 0)
+    current_label, current_emoji = _wmo_info(current_code)
+
+    # ── Parse daily forecast (skip index 0 = today) ───────────────────────────
+    daily       = data.get("daily", {})
+    dates       = daily.get("time", [])
+    precip_probs = daily.get("precipitation_probability_max", [])
+    daily_codes  = daily.get("weather_code", [])
+    max_temps    = daily.get("temperature_2m_max", [])
+    min_temps    = daily.get("temperature_2m_min", [])
+
+    forecast: list[dict] = []
+    rain_days: list[str] = []
+
+    # Indices 1 and 2 = Day 1 and Day 2 (index 0 = today, already covered by current)
+    for i in range(1, min(3, len(dates))):
+        prob  = precip_probs[i] if i < len(precip_probs) else 0
+        code  = daily_codes[i]  if i < len(daily_codes)  else 0
+        label, emoji = _wmo_info(code)
+        t_max = max_temps[i] if i < len(max_temps) else None
+        t_min = min_temps[i] if i < len(min_temps) else None
+        rain_risk = prob > RAIN_PROBABILITY_THRESHOLD or _is_rainy_code(code)
+
+        entry = {
+            "date":                    dates[i],
+            "day_label":               f"Day {i}",
+            "weather_code":            code,
+            "condition":               label,
+            "emoji":                   emoji,
+            "precipitation_probability": prob,
+            "rain_risk":               rain_risk,
+            "temp_max_c":              t_max,
+            "temp_min_c":              t_min,
+        }
+        forecast.append(entry)
+        if rain_risk:
+            rain_days.append(dates[i])
+
+    # ── Aggregate flag ────────────────────────────────────────────────────────
+    current_is_rainy = _is_rainy_code(current_code)
+    rain_expected_in_next_48h = bool(rain_days) or current_is_rainy
+
+    # ── Risk advisory message ─────────────────────────────────────────────────
+    if current_is_rainy and rain_days:
+        advisory = (
+            "Active rainfall NOW + rain forecast ahead. "
+            "HIGH FLOOD RISK on Silchar corridors. Reroute all NER shipments immediately."
+        )
+    elif current_is_rainy:
+        advisory = (
+            "Active rainfall in Silchar. Monitor closely — "
+            "short-term flood risk elevated on surrounding routes."
+        )
+    elif rain_days:
+        days_str = " and ".join(rain_days)
+        advisory = (
+            f"Rain forecast on {days_str} (>{RAIN_PROBABILITY_THRESHOLD}% probability). "
+            "Pre-emptively review routes via Silchar. Flood risk elevated."
+        )
+    else:
+        advisory = (
+            "No significant rain expected in the next 48 hours. "
+            "Silchar corridors currently safe for operations."
+        )
+
+    return {
+        "location": {
+            "city":      "Silchar",
+            "state":     "Assam",
+            "country":   "India",
+            "latitude":  SILCHAR_LAT,
+            "longitude": SILCHAR_LON,
+        },
+        "current": {
+            "temperature_c":  current_temp,
+            "weather_code":   current_code,
+            "condition":      current_label,
+            "emoji":          current_emoji,
+            "is_raining_now": current_is_rainy,
+        },
+        "forecast":                  forecast,
+        "rain_expected_in_next_48h": rain_expected_in_next_48h,
+        "rain_days":                 rain_days,
+        "risk_advisory":             advisory,
+        "rain_threshold_pct":        RAIN_PROBABILITY_THRESHOLD,
+        "fetched_at":                time.time(),
     }

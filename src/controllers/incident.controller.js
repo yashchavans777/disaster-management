@@ -63,20 +63,38 @@ const runAgenticLoop = async (incident, app) => {
     try {
       weatherData = await weatherService.getWeatherData(lat, lng);
     } catch (weatherError) {
-      logger.warn(`[Agentic] Weather fetch failed: ${weatherError.message} — using empty data`);
+      logger.warn(
+        `[Agentic] Weather fetch failed: ${weatherError.message} — using empty data`
+      );
     }
 
     // Step 2: DL model predicts new risk score
-    const riskLevel = await aiRouteService.calculateRouteRisk(weatherData, lat, lng);
-    const riskScore = await aiRouteService.calculateRawRiskScore(weatherData, lat, lng);
+    const riskLevel = await aiRouteService.calculateRouteRisk(
+      weatherData,
+      lat,
+      lng
+    );
+    const riskScore = await aiRouteService.calculateRawRiskScore(
+      weatherData,
+      lat,
+      lng
+    );
 
-    logger.info(`[Agentic] Incident at (${lat}, ${lng}) → risk: ${riskLevel} (score: ${riskScore})`);
+    logger.info(
+      `[Agentic] Incident at (${lat}, ${lng}) → risk: ${riskLevel} (score: ${riskScore})`
+    );
 
     // Step 3: A* GIS calculates alternate route from nearest node
     const nearestOrigin = gisService.nearestNode([lat, lng]);
     const blockedEdges = new Set(); // future: populate from active incidents
-    const alternateResult = gisService.aStarRoute(nearestOrigin, 'guwahati', blockedEdges);
-    const alternateCoordinates = alternateResult ? gisService.pathToCoordinates(alternateResult.path) : [];
+    const alternateResult = gisService.aStarRoute(
+      nearestOrigin,
+      'guwahati',
+      blockedEdges
+    );
+    const alternateCoordinates = alternateResult
+      ? gisService.pathToCoordinates(alternateResult.path)
+      : [];
 
     // Step 4: Build messages
     const { english, hindi } = buildAlertMessages(incident, riskLevel);
@@ -98,7 +116,9 @@ const runAgenticLoop = async (incident, app) => {
         triggeredAt: new Date().toISOString(),
       });
 
-      logger.info(`[Agentic] Broadcast route_hazard_alert to all sockets — risk: ${riskLevel}`);
+      logger.info(
+        `[Agentic] Broadcast route_hazard_alert to all sockets — risk: ${riskLevel}`
+      );
     }
 
     // Step 6: If high/critical risk → notify all in-transit drivers
@@ -132,7 +152,9 @@ const runAgenticLoop = async (incident, app) => {
         )
       );
 
-      logger.info(`[Agentic] Sent ${driverIds.length} driver notifications for high-risk incident`);
+      logger.info(
+        `[Agentic] Sent ${driverIds.length} driver notifications for high-risk incident`
+      );
     }
   } catch (error) {
     logger.error(`[Agentic] Loop error: ${error.message}`);
@@ -148,9 +170,19 @@ const createIncident = async (req, res) => {
     // Fire agentic loop asynchronously — do NOT await so HTTP responds immediately
     setImmediate(() => runAgenticLoop(incident, req.app));
 
-    return apiResponse.success(res, 201, 'Incident report created successfully', incident);
+    return apiResponse.success(
+      res,
+      201,
+      'Incident report created successfully',
+      incident
+    );
   } catch (err) {
-    return apiResponse.error(res, 500, 'Failed to create incident report', err.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to create incident report',
+      err.message
+    );
   }
 };
 
@@ -160,9 +192,19 @@ const getIncidents = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate('reportedBy', 'name email');
 
-    return apiResponse.success(res, 200, 'Incident reports fetched successfully', incidents);
+    return apiResponse.success(
+      res,
+      200,
+      'Incident reports fetched successfully',
+      incidents
+    );
   } catch (err) {
-    return apiResponse.error(res, 500, 'Failed to fetch incident reports', err.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to fetch incident reports',
+      err.message
+    );
   }
 };
 

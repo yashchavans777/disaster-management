@@ -20,12 +20,12 @@ const logger = require('../utils/logger');
 // ── Feature Weights (DL calibration values) ────────────────────────────────
 // Derived from statistical analysis of NER disaster-correlation data
 const WEIGHTS = {
-  windspeed:       0.031,  // km/h (max ~80 in NER cyclones)
-  precipitation:   0.018,  // mm/h (max ~200 in heavy monsoon)
-  weathercode:     0.008,  // WMO code (>70 = rain, >95 = thunderstorm)
-  temperature:     -0.004, // °C — high temp slightly reduces risk
-  relativeHumidity:0.005,  // % — high humidity increases landslide risk
-  historicalBias:  0.25,   // additive bias from recent local incidents
+  windspeed: 0.031, // km/h (max ~80 in NER cyclones)
+  precipitation: 0.018, // mm/h (max ~200 in heavy monsoon)
+  weathercode: 0.008, // WMO code (>70 = rain, >95 = thunderstorm)
+  temperature: -0.004, // °C — high temp slightly reduces risk
+  relativeHumidity: 0.005, // % — high humidity increases landslide risk
+  historicalBias: 0.25, // additive bias from recent local incidents
 };
 
 const BIAS = -2.1; // learned intercept to centre sigmoid near 0.3 for fair weather
@@ -80,10 +80,10 @@ const getHistoricalBiasScore = async (lat, lng) => {
  * Normalise a raw weather feature value to ~[0, 1] range.
  */
 const normalise = {
-  windspeed:        (v) => Math.min(v / 80, 1),
-  precipitation:    (v) => Math.min(v / 200, 1),
-  weathercode:      (v) => Math.min(v / 100, 1),
-  temperature:      (v) => Math.min(Math.max(v, 0) / 50, 1),
+  windspeed: (v) => Math.min(v / 80, 1),
+  precipitation: (v) => Math.min(v / 200, 1),
+  weathercode: (v) => Math.min(v / 100, 1),
+  temperature: (v) => Math.min(Math.max(v, 0) / 50, 1),
   relativeHumidity: (v) => Math.min(v / 100, 1),
 };
 
@@ -97,11 +97,24 @@ const normalise = {
  */
 const calculateRouteRisk = async (weatherData = {}, lat = null, lng = null) => {
   // ── Extract and normalise features ───────────────────────────────────────
-  const windspeed        = normalise.windspeed(weatherData.windspeed ?? weatherData.wind_speed_10m ?? 0);
-  const precipitation    = normalise.precipitation(weatherData.rain ?? weatherData.precipitation ?? weatherData.precipitation_sum ?? 0);
-  const weathercode      = normalise.weathercode(weatherData.weathercode ?? weatherData.weather_code ?? 0);
-  const temperature      = normalise.temperature(weatherData.temperature ?? weatherData.temperature_2m ?? 25);
-  const relativeHumidity = normalise.relativeHumidity(weatherData.relativehumidity_2m ?? weatherData.relative_humidity_2m ?? 60);
+  const windspeed = normalise.windspeed(
+    weatherData.windspeed ?? weatherData.wind_speed_10m ?? 0
+  );
+  const precipitation = normalise.precipitation(
+    weatherData.rain ??
+      weatherData.precipitation ??
+      weatherData.precipitation_sum ??
+      0
+  );
+  const weathercode = normalise.weathercode(
+    weatherData.weathercode ?? weatherData.weather_code ?? 0
+  );
+  const temperature = normalise.temperature(
+    weatherData.temperature ?? weatherData.temperature_2m ?? 25
+  );
+  const relativeHumidity = normalise.relativeHumidity(
+    weatherData.relativehumidity_2m ?? weatherData.relative_humidity_2m ?? 60
+  );
 
   // ── Historical recency weighting ─────────────────────────────────────────
   const historicalBias = await getHistoricalBiasScore(lat, lng);
@@ -109,19 +122,19 @@ const calculateRouteRisk = async (weatherData = {}, lat = null, lng = null) => {
   // ── Weighted sum (linear combination = DL linear layer) ──────────────────
   const z =
     BIAS +
-    WEIGHTS.windspeed        * windspeed        * 80  +
-    WEIGHTS.precipitation    * precipitation    * 200 +
-    WEIGHTS.weathercode      * weathercode      * 100 +
-    WEIGHTS.temperature      * temperature      * 50  +
+    WEIGHTS.windspeed * windspeed * 80 +
+    WEIGHTS.precipitation * precipitation * 200 +
+    WEIGHTS.weathercode * weathercode * 100 +
+    WEIGHTS.temperature * temperature * 50 +
     WEIGHTS.relativeHumidity * relativeHumidity * 100 +
-    WEIGHTS.historicalBias   * historicalBias;
+    WEIGHTS.historicalBias * historicalBias;
 
   // ── Sigmoid activation → risk score ──────────────────────────────────────
   const riskScore = sigmoid(z);
 
   logger.debug(
     `DL Risk: z=${z.toFixed(3)} → score=${riskScore.toFixed(3)} | ` +
-    `wind=${weatherData.windspeed ?? 0}, rain=${weatherData.rain ?? 0}, histBias=${historicalBias.toFixed(2)}`
+      `wind=${weatherData.windspeed ?? 0}, rain=${weatherData.rain ?? 0}, histBias=${historicalBias.toFixed(2)}`
   );
 
   // ── Threshold classification ──────────────────────────────────────────────
@@ -133,24 +146,42 @@ const calculateRouteRisk = async (weatherData = {}, lat = null, lng = null) => {
 /**
  * Get the raw numeric risk score (0–1) for the FastAPI service / dashboard analytics.
  */
-const calculateRawRiskScore = async (weatherData = {}, lat = null, lng = null) => {
-  const windspeed        = normalise.windspeed(weatherData.windspeed ?? weatherData.wind_speed_10m ?? 0);
-  const precipitation    = normalise.precipitation(weatherData.rain ?? weatherData.precipitation ?? 0);
-  const weathercode      = normalise.weathercode(weatherData.weathercode ?? weatherData.weather_code ?? 0);
-  const temperature      = normalise.temperature(weatherData.temperature ?? weatherData.temperature_2m ?? 25);
-  const relativeHumidity = normalise.relativeHumidity(weatherData.relativehumidity_2m ?? 60);
-  const historicalBias   = await getHistoricalBiasScore(lat, lng);
+const calculateRawRiskScore = async (
+  weatherData = {},
+  lat = null,
+  lng = null
+) => {
+  const windspeed = normalise.windspeed(
+    weatherData.windspeed ?? weatherData.wind_speed_10m ?? 0
+  );
+  const precipitation = normalise.precipitation(
+    weatherData.rain ?? weatherData.precipitation ?? 0
+  );
+  const weathercode = normalise.weathercode(
+    weatherData.weathercode ?? weatherData.weather_code ?? 0
+  );
+  const temperature = normalise.temperature(
+    weatherData.temperature ?? weatherData.temperature_2m ?? 25
+  );
+  const relativeHumidity = normalise.relativeHumidity(
+    weatherData.relativehumidity_2m ?? 60
+  );
+  const historicalBias = await getHistoricalBiasScore(lat, lng);
 
   const z =
     BIAS +
-    WEIGHTS.windspeed        * windspeed        * 80  +
-    WEIGHTS.precipitation    * precipitation    * 200 +
-    WEIGHTS.weathercode      * weathercode      * 100 +
-    WEIGHTS.temperature      * temperature      * 50  +
+    WEIGHTS.windspeed * windspeed * 80 +
+    WEIGHTS.precipitation * precipitation * 200 +
+    WEIGHTS.weathercode * weathercode * 100 +
+    WEIGHTS.temperature * temperature * 50 +
     WEIGHTS.relativeHumidity * relativeHumidity * 100 +
-    WEIGHTS.historicalBias   * historicalBias;
+    WEIGHTS.historicalBias * historicalBias;
 
   return Number(sigmoid(z).toFixed(4));
 };
 
-module.exports = { calculateRouteRisk, calculateRawRiskScore, getHistoricalBiasScore };
+module.exports = {
+  calculateRouteRisk,
+  calculateRawRiskScore,
+  getHistoricalBiasScore,
+};

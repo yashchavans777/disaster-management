@@ -12,14 +12,21 @@ const router = express.Router();
  */
 router.get('/stats', async (req, res) => {
   try {
-    const [totalShipments, activeShipments, totalIncidents, unresolvedIncidents, unreadNotifications] =
-      await Promise.all([
-        Shipment.countDocuments(),
-        Shipment.countDocuments({ status: { $in: ['in-transit', 'assigned'] } }),
-        IncidentReport.countDocuments(),
-        IncidentReport.countDocuments({ status: { $in: ['active', 'reported', 'verified'] } }),
-        Notification.countDocuments({ read: { $ne: true } }),
-      ]);
+    const [
+      totalShipments,
+      activeShipments,
+      totalIncidents,
+      unresolvedIncidents,
+      unreadNotifications,
+    ] = await Promise.all([
+      Shipment.countDocuments(),
+      Shipment.countDocuments({ status: { $in: ['in-transit', 'assigned'] } }),
+      IncidentReport.countDocuments(),
+      IncidentReport.countDocuments({
+        status: { $in: ['active', 'reported', 'verified'] },
+      }),
+      Notification.countDocuments({ read: { $ne: true } }),
+    ]);
 
     return apiResponse.success(res, 200, 'Dashboard stats fetched', {
       totalShipments,
@@ -29,7 +36,12 @@ router.get('/stats', async (req, res) => {
       unreadNotifications,
     });
   } catch (error) {
-    return apiResponse.error(res, 500, 'Failed to fetch dashboard stats', error.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to fetch dashboard stats',
+      error.message
+    );
   }
 });
 
@@ -46,9 +58,19 @@ router.get('/shipment-status-chart', async (req, res) => {
 
     const chartData = counts.map(({ _id, count }) => ({ status: _id, count }));
 
-    return apiResponse.success(res, 200, 'Shipment chart data fetched', chartData);
+    return apiResponse.success(
+      res,
+      200,
+      'Shipment chart data fetched',
+      chartData
+    );
   } catch (error) {
-    return apiResponse.error(res, 500, 'Failed to fetch chart data', error.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to fetch chart data',
+      error.message
+    );
   }
 });
 
@@ -70,11 +92,19 @@ router.get('/incident-trend', async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    const trendData = trend.map(({ _id, count }) => ({ date: _id, incidents: count }));
+    const trendData = trend.map(({ _id, count }) => ({
+      date: _id,
+      incidents: count,
+    }));
 
     return apiResponse.success(res, 200, 'Incident trend fetched', trendData);
   } catch (error) {
-    return apiResponse.error(res, 500, 'Failed to fetch incident trend', error.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to fetch incident trend',
+      error.message
+    );
   }
 });
 

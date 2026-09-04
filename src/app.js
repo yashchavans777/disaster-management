@@ -69,7 +69,11 @@ app.use('/api/ai', aiRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'SmartLogistics NER Node.js backend', ts: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'SmartLogistics NER Node.js backend',
+    ts: new Date().toISOString(),
+  });
 });
 
 // ── Socket.io — vehicle tracking ──────────────────────────────────────────────

@@ -17,10 +17,22 @@ const logger = require('../utils/logger');
  * @param {object} [options.metadata={}]
  * @returns {Promise<import('mongoose').Document>}
  */
-const sendNotification = async ({ userId, message, type = 'info', metadata = {} }) => {
+const sendNotification = async ({
+  userId,
+  message,
+  type = 'info',
+  metadata = {},
+}) => {
   try {
-    const notification = await Notification.create({ userId, message, type, metadata });
-    logger.info(`Notification created for user ${userId}: [${type}] ${message}`);
+    const notification = await Notification.create({
+      userId,
+      message,
+      type,
+      metadata,
+    });
+    logger.info(
+      `Notification created for user ${userId}: [${type}] ${message}`
+    );
     return notification;
   } catch (error) {
     logger.error(`Failed to create notification: ${error.message}`);

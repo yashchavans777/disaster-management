@@ -1,7 +1,5 @@
 const express = require('express');
-const {
-  evaluateRouteRisk,
-} = require('../controllers/route.controller');
+const { evaluateRouteRisk } = require('../controllers/route.controller');
 
 const router = express.Router();
 

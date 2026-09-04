@@ -73,4 +73,5 @@ const shipmentSchema = new Schema(
   }
 );
 
-module.exports = mongoose.models.Shipment || mongoose.model('Shipment', shipmentSchema);
+module.exports =
+  mongoose.models.Shipment || mongoose.model('Shipment', shipmentSchema);

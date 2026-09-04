@@ -14,7 +14,12 @@ const initialFormState = {
   longitude: '',
 };
 
-function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }) {
+function ReportIncidentModal({
+  isOpen,
+  isSubmitting = false,
+  onClose,
+  onSubmit,
+}) {
   const [formValues, setFormValues] = useState(initialFormState);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
@@ -50,7 +55,9 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
         setIsFetchingLocation(false);
       },
       (error) => {
-        setLocationError(error.message || 'Unable to retrieve your current location.');
+        setLocationError(
+          error.message || 'Unable to retrieve your current location.'
+        );
         setIsFetchingLocation(false);
       },
       {
@@ -79,8 +86,13 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Report Incident</h2>
-            <p className="mt-1 text-sm text-slate-600">Submit a field incident with type, description, and GPS coordinates.</p>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Report Incident
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Submit a field incident with type, description, and GPS
+              coordinates.
+            </p>
           </div>
 
           <button
@@ -111,7 +123,9 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Description</span>
+            <span className="text-sm font-medium text-slate-700">
+              Description
+            </span>
             <textarea
               name="description"
               value={formValues.description}
@@ -125,7 +139,9 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Latitude</span>
+              <span className="text-sm font-medium text-slate-700">
+                Latitude
+              </span>
               <input
                 type="number"
                 step="any"
@@ -138,7 +154,9 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
             </label>
 
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Longitude</span>
+              <span className="text-sm font-medium text-slate-700">
+                Longitude
+              </span>
               <input
                 type="number"
                 step="any"
@@ -158,11 +176,19 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
               disabled={isFetchingLocation}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isFetchingLocation ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-              {isFetchingLocation ? 'Fetching location...' : 'Get Current Location'}
+              {isFetchingLocation ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="h-4 w-4" />
+              )}
+              {isFetchingLocation
+                ? 'Fetching location...'
+                : 'Get Current Location'}
             </button>
 
-            {locationError ? <p className="text-sm text-red-600">{locationError}</p> : null}
+            {locationError ? (
+              <p className="text-sm text-red-600">{locationError}</p>
+            ) : null}
           </div>
 
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
@@ -179,7 +205,11 @@ function ReportIncidentModal({ isOpen, isSubmitting = false, onClose, onSubmit }
               disabled={isSubmitting}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
               {isSubmitting ? 'Submitting...' : 'Submit Incident'}
             </button>
           </div>

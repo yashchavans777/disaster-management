@@ -20,7 +20,8 @@ const offlineQueueSchema = new mongoose.Schema(
 );
 
 const OfflineQueue =
-  mongoose.models.OfflineQueue || mongoose.model('OfflineQueue', offlineQueueSchema);
+  mongoose.models.OfflineQueue ||
+  mongoose.model('OfflineQueue', offlineQueueSchema);
 
 /**
  * Enqueue a payload for later sync (called when server-side write fails offline).
@@ -49,17 +50,23 @@ const flushQueue = async () => {
       }
       await OfflineQueue.deleteOne({ _id: item._id });
       synced += 1;
-      logger.info(`[OfflineSync] Synced queued ${item.entityType} (id: ${item._id})`);
+      logger.info(
+        `[OfflineSync] Synced queued ${item.entityType} (id: ${item._id})`
+      );
     } catch (error) {
       item.attempts += 1;
       item.lastError = error.message;
       await item.save();
       failed += 1;
-      logger.warn(`[OfflineSync] Failed to sync item ${item._id}: ${error.message}`);
+      logger.warn(
+        `[OfflineSync] Failed to sync item ${item._id}: ${error.message}`
+      );
     }
   }
 
-  logger.info(`[OfflineSync] Flush complete — synced: ${synced}, failed: ${failed}`);
+  logger.info(
+    `[OfflineSync] Flush complete — synced: ${synced}, failed: ${failed}`
+  );
   return { synced, failed };
 };
 

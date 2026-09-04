@@ -38,22 +38,40 @@ const predictRisk = async (req, res) => {
 
       if (fastapiRes.ok) {
         const data = await fastapiRes.json();
-        return apiResponse.success(res, 200, 'Risk predicted by FastAPI AI service', data);
+        return apiResponse.success(
+          res,
+          200,
+          'Risk predicted by FastAPI AI service',
+          data
+        );
       }
     } catch (_) {
       logger.warn('FastAPI unavailable — falling back to Node.js DL model');
     }
 
     // Node.js DL fallback
-    const riskLevel = await aiRouteService.calculateRouteRisk(weatherData, lat, lng);
-    const riskScore = await aiRouteService.calculateRawRiskScore(weatherData, lat, lng);
+    const riskLevel = await aiRouteService.calculateRouteRisk(
+      weatherData,
+      lat,
+      lng
+    );
+    const riskScore = await aiRouteService.calculateRawRiskScore(
+      weatherData,
+      lat,
+      lng
+    );
 
-    return apiResponse.success(res, 200, 'Risk predicted by Node.js DL model (FastAPI fallback)', {
-      risk_level: riskLevel,
-      risk_score: riskScore,
-      weather: weatherData,
-      source: 'node-dl-fallback',
-    });
+    return apiResponse.success(
+      res,
+      200,
+      'Risk predicted by Node.js DL model (FastAPI fallback)',
+      {
+        risk_level: riskLevel,
+        risk_score: riskScore,
+        weather: weatherData,
+        source: 'node-dl-fallback',
+      }
+    );
   } catch (error) {
     logger.error(`predictRisk error: ${error.message}`);
     return apiResponse.error(res, 500, 'Risk prediction failed', error.message);
@@ -69,7 +87,11 @@ const ragQuery = async (req, res) => {
   try {
     const { question } = req.body;
 
-    if (!question || typeof question !== 'string' || question.trim().length < 3) {
+    if (
+      !question ||
+      typeof question !== 'string' ||
+      question.trim().length < 3
+    ) {
       return apiResponse.error(res, 400, 'question (string) is required');
     }
 
@@ -80,25 +102,37 @@ const ragQuery = async (req, res) => {
       .select('type title description severity location status createdAt')
       .lean();
 
-    const context = recentIncidents.map((inc) =>
-      `[${inc.createdAt?.toISOString?.() || 'unknown time'}] ` +
-      `Type: ${inc.type}, Severity: ${inc.severity}, Status: ${inc.status}. ` +
-      `Location: (${inc.location?.lat?.toFixed(4)}, ${inc.location?.lng?.toFixed(4)}). ` +
-      `Description: ${inc.description}`
-    ).join('\n');
+    const context = recentIncidents
+      .map(
+        (inc) =>
+          `[${inc.createdAt?.toISOString?.() || 'unknown time'}] ` +
+          `Type: ${inc.type}, Severity: ${inc.severity}, Status: ${inc.status}. ` +
+          `Location: (${inc.location?.lat?.toFixed(4)}, ${inc.location?.lng?.toFixed(4)}). ` +
+          `Description: ${inc.description}`
+      )
+      .join('\n');
 
     // Try FastAPI RAG endpoint
     try {
       const fastapiRes = await fetch(`${FASTAPI_URL}/rag-query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.trim(), context, incident_count: recentIncidents.length }),
+        body: JSON.stringify({
+          question: question.trim(),
+          context,
+          incident_count: recentIncidents.length,
+        }),
         signal: AbortSignal.timeout(8000),
       });
 
       if (fastapiRes.ok) {
         const data = await fastapiRes.json();
-        return apiResponse.success(res, 200, 'RAG query answered by FastAPI', data);
+        return apiResponse.success(
+          res,
+          200,
+          'RAG query answered by FastAPI',
+          data
+        );
       }
     } catch (_) {
       logger.warn('FastAPI RAG unavailable — using local summariser');
@@ -161,8 +195,15 @@ const buildLocalRagAnswer = (question, incidents) => {
     return `${high} high/critical severity incidents in the last ${total} reports. Breakdown: High=${bySeverity['high'] || 0}, Critical=${bySeverity['critical'] || 0}, Medium=${bySeverity['medium'] || 0}.`;
   }
 
-  if (q.includes('status') || q.includes('unresolved') || q.includes('active')) {
-    const unresolved = (byStatus['active'] || 0) + (byStatus['reported'] || 0) + (byStatus['verified'] || 0);
+  if (
+    q.includes('status') ||
+    q.includes('unresolved') ||
+    q.includes('active')
+  ) {
+    const unresolved =
+      (byStatus['active'] || 0) +
+      (byStatus['reported'] || 0) +
+      (byStatus['verified'] || 0);
     return `${unresolved} of the last ${total} incidents remain unresolved (active/reported/verified). ${byStatus['resolved'] || 0} have been resolved.`;
   }
 
@@ -184,13 +225,24 @@ const graphRoute = async (req, res) => {
     const { origin, destination } = req.body;
 
     if (!origin || !destination) {
-      return apiResponse.error(res, 400, 'origin and destination city slugs are required');
+      return apiResponse.error(
+        res,
+        400,
+        'origin and destination city slugs are required'
+      );
     }
 
-    const result = gisService.aStarRoute(origin.toLowerCase(), destination.toLowerCase());
+    const result = gisService.aStarRoute(
+      origin.toLowerCase(),
+      destination.toLowerCase()
+    );
 
     if (!result) {
-      return apiResponse.error(res, 404, `No route found between "${origin}" and "${destination}"`);
+      return apiResponse.error(
+        res,
+        404,
+        `No route found between "${origin}" and "${destination}"`
+      );
     }
 
     const coordinates = gisService.pathToCoordinates(result.path);
@@ -202,7 +254,12 @@ const graphRoute = async (req, res) => {
     });
   } catch (error) {
     logger.error(`graphRoute error: ${error.message}`);
-    return apiResponse.error(res, 500, 'Route calculation failed', error.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Route calculation failed',
+      error.message
+    );
   }
 };
 

@@ -23,13 +23,17 @@ const getWeatherData = async (lat, lng) => {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Open-Meteo API responded with status ${response.status}`);
+      throw new Error(
+        `Open-Meteo API responded with status ${response.status}`
+      );
     }
 
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(`Open-Meteo API error: ${data.reason || 'Unknown reason'}`);
+      throw new Error(
+        `Open-Meteo API error: ${data.reason || 'Unknown reason'}`
+      );
     }
 
     return data.current_weather || {};

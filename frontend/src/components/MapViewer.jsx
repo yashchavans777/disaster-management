@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from 'react-leaflet';
 
 import Loader from './Loader';
 
@@ -11,11 +17,19 @@ const riskColors = {
   high: '#dc2626',
 };
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
+const SOCKET_SERVER_URL =
+  import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
 const ANIMATION_DURATION_MS = 900;
 
 const getVehicleKeys = (vehicle = {}) =>
-  [vehicle.id, vehicle._id, vehicle.vehicleId, vehicle.trackingId, vehicle.vehicleNumber, vehicle.registrationNumber]
+  [
+    vehicle.id,
+    vehicle._id,
+    vehicle.vehicleId,
+    vehicle.trackingId,
+    vehicle.vehicleNumber,
+    vehicle.registrationNumber,
+  ]
     .filter(Boolean)
     .map(String);
 
@@ -33,8 +47,17 @@ const getUpdateKeys = (update = {}) =>
     .map(String);
 
 const getUpdateCoordinates = (update = {}) => {
-  const latitude = update.latitude ?? update.lat ?? update.location?.latitude ?? update.location?.lat;
-  const longitude = update.longitude ?? update.lng ?? update.lon ?? update.location?.longitude ?? update.location?.lng;
+  const latitude =
+    update.latitude ??
+    update.lat ??
+    update.location?.latitude ??
+    update.location?.lat;
+  const longitude =
+    update.longitude ??
+    update.lng ??
+    update.lon ??
+    update.location?.longitude ??
+    update.location?.lng;
 
   if (latitude === undefined || longitude === undefined) {
     return null;
@@ -49,7 +72,11 @@ const getUpdateCoordinates = (update = {}) => {
 const animateVehicleMovement = (vehicle, update, onFrame) => {
   const coordinates = getUpdateCoordinates(update);
 
-  if (!coordinates || Number.isNaN(coordinates.latitude) || Number.isNaN(coordinates.longitude)) {
+  if (
+    !coordinates ||
+    Number.isNaN(coordinates.latitude) ||
+    Number.isNaN(coordinates.longitude)
+  ) {
     return undefined;
   }
 
@@ -61,15 +88,23 @@ const animateVehicleMovement = (vehicle, update, onFrame) => {
   let animationFrameId;
 
   const step = (timestamp) => {
-    const progress = Math.min((timestamp - startedAt) / ANIMATION_DURATION_MS, 1);
+    const progress = Math.min(
+      (timestamp - startedAt) / ANIMATION_DURATION_MS,
+      1
+    );
     const easedProgress = 1 - (1 - progress) ** 3;
 
     onFrame({
       ...vehicle,
-      latitude: Number((startLatitude + deltaLatitude * easedProgress).toFixed(6)),
-      longitude: Number((startLongitude + deltaLongitude * easedProgress).toFixed(6)),
+      latitude: Number(
+        (startLatitude + deltaLatitude * easedProgress).toFixed(6)
+      ),
+      longitude: Number(
+        (startLongitude + deltaLongitude * easedProgress).toFixed(6)
+      ),
       status: update.status || vehicle.status,
-      driverName: update.driverName || update.driver?.name || vehicle.driverName,
+      driverName:
+        update.driverName || update.driver?.name || vehicle.driverName,
       lastUpdatedAt: update.updatedAt || new Date().toISOString(),
     });
 
@@ -90,9 +125,13 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
 
   useEffect(() => {
     setLiveVehicles((currentVehicles) => {
-      const currentById = new Map(currentVehicles.map((vehicle) => [vehicle.id, vehicle]));
+      const currentById = new Map(
+        currentVehicles.map((vehicle) => [vehicle.id, vehicle])
+      );
 
-      return activeVehicles.map((vehicle) => currentById.get(vehicle.id) || vehicle);
+      return activeVehicles.map(
+        (vehicle) => currentById.get(vehicle.id) || vehicle
+      );
     });
   }, [activeVehicles]);
 
@@ -108,24 +147,34 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
     socket.on('vehicle_moved', (locationUpdate) => {
       const updateKeys = getUpdateKeys(locationUpdate);
       const matchedVehicle = liveVehiclesRef.current.find((vehicle) =>
-        getVehicleKeys(vehicle).some((vehicleKey) => updateKeys.includes(vehicleKey))
+        getVehicleKeys(vehicle).some((vehicleKey) =>
+          updateKeys.includes(vehicleKey)
+        )
       );
 
       if (!matchedVehicle) {
         return;
       }
 
-      const cancelExistingAnimation = animationsRef.current.get(matchedVehicle.id);
+      const cancelExistingAnimation = animationsRef.current.get(
+        matchedVehicle.id
+      );
 
       if (cancelExistingAnimation) {
         cancelExistingAnimation();
       }
 
-      const cancelAnimation = animateVehicleMovement(matchedVehicle, locationUpdate, (nextVehicle) => {
-        setLiveVehicles((vehiclesDuringAnimation) =>
-          vehiclesDuringAnimation.map((vehicle) => (vehicle.id === matchedVehicle.id ? nextVehicle : vehicle))
-        );
-      });
+      const cancelAnimation = animateVehicleMovement(
+        matchedVehicle,
+        locationUpdate,
+        (nextVehicle) => {
+          setLiveVehicles((vehiclesDuringAnimation) =>
+            vehiclesDuringAnimation.map((vehicle) =>
+              vehicle.id === matchedVehicle.id ? nextVehicle : vehicle
+            )
+          );
+        }
+      );
 
       if (cancelAnimation) {
         animationsRef.current.set(matchedVehicle.id, cancelAnimation);
@@ -141,7 +190,11 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
   }, []);
 
   const visibleVehicles = useMemo(
-    () => liveVehicles.filter((vehicle) => vehicle.latitude !== undefined && vehicle.longitude !== undefined),
+    () =>
+      liveVehicles.filter(
+        (vehicle) =>
+          vehicle.latitude !== undefined && vehicle.longitude !== undefined
+      ),
     [liveVehicles]
   );
 
@@ -180,15 +233,23 @@ function MapViewer({ activeVehicles = [], routes = [], isLoading = false }) {
         ))}
 
         {visibleVehicles.map((vehicle) => (
-          <Marker key={vehicle.id} position={[vehicle.latitude, vehicle.longitude]}>
+          <Marker
+            key={vehicle.id}
+            position={[vehicle.latitude, vehicle.longitude]}
+          >
             <Popup>
               <div className="min-w-[180px]">
                 <h3 className="font-semibold text-slate-900">{vehicle.name}</h3>
-                <p className="text-sm text-slate-600">Status: {vehicle.status}</p>
-                <p className="text-sm text-slate-600">Driver: {vehicle.driverName}</p>
+                <p className="text-sm text-slate-600">
+                  Status: {vehicle.status}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Driver: {vehicle.driverName}
+                </p>
                 {vehicle.lastUpdatedAt ? (
                   <p className="text-xs text-slate-500">
-                    Updated: {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
+                    Updated:{' '}
+                    {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
                   </p>
                 ) : null}
               </div>

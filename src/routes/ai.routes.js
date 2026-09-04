@@ -1,5 +1,9 @@
 const express = require('express');
-const { predictRisk, ragQuery, graphRoute } = require('../controllers/ai.controller');
+const {
+  predictRisk,
+  ragQuery,
+  graphRoute,
+} = require('../controllers/ai.controller');
 
 const router = express.Router();
 

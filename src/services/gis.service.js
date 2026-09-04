@@ -12,16 +12,34 @@ const { haversineDistance } = require('../utils/geoHelpers');
 // Each key is a city slug; value has coordinates and neighbours with optional
 // risk multipliers (1.0 = normal, 2.0 = route avoidance due to risk).
 const GRAPH = {
-  guwahati:   { coord: [26.1445, 91.7362], edges: { shillong: 1.0, silchar: 1.2, dibrugarh: 1.0 } },
-  shillong:   { coord: [25.5788, 91.8933], edges: { guwahati: 1.0, silchar: 1.1, imphal: 1.3 } },
-  silchar:    { coord: [24.8333, 92.7789], edges: { guwahati: 1.2, shillong: 1.1, agartala: 1.0, aizawl: 1.2 } },
-  agartala:   { coord: [23.8315, 91.2868], edges: { silchar: 1.0 } },
-  aizawl:     { coord: [23.7271, 92.7176], edges: { silchar: 1.2, imphal: 1.1 } },
-  imphal:     { coord: [24.817,  93.9368], edges: { shillong: 1.3, aizawl: 1.1, kohima: 1.0 } },
-  kohima:     { coord: [25.6751, 94.1086], edges: { imphal: 1.0, itanagar: 1.4 } },
-  itanagar:   { coord: [27.0844, 93.6053], edges: { guwahati: 1.1, kohima: 1.4, dibrugarh: 1.2 } },
-  dibrugarh:  { coord: [27.4728, 94.912],  edges: { guwahati: 1.0, itanagar: 1.2 } },
-  gangtok:    { coord: [27.3389, 88.6065], edges: { guwahati: 1.3 } },
+  guwahati: {
+    coord: [26.1445, 91.7362],
+    edges: { shillong: 1.0, silchar: 1.2, dibrugarh: 1.0 },
+  },
+  shillong: {
+    coord: [25.5788, 91.8933],
+    edges: { guwahati: 1.0, silchar: 1.1, imphal: 1.3 },
+  },
+  silchar: {
+    coord: [24.8333, 92.7789],
+    edges: { guwahati: 1.2, shillong: 1.1, agartala: 1.0, aizawl: 1.2 },
+  },
+  agartala: { coord: [23.8315, 91.2868], edges: { silchar: 1.0 } },
+  aizawl: { coord: [23.7271, 92.7176], edges: { silchar: 1.2, imphal: 1.1 } },
+  imphal: {
+    coord: [24.817, 93.9368],
+    edges: { shillong: 1.3, aizawl: 1.1, kohima: 1.0 },
+  },
+  kohima: { coord: [25.6751, 94.1086], edges: { imphal: 1.0, itanagar: 1.4 } },
+  itanagar: {
+    coord: [27.0844, 93.6053],
+    edges: { guwahati: 1.1, kohima: 1.4, dibrugarh: 1.2 },
+  },
+  dibrugarh: {
+    coord: [27.4728, 94.912],
+    edges: { guwahati: 1.0, itanagar: 1.2 },
+  },
+  gangtok: { coord: [27.3389, 88.6065], edges: { guwahati: 1.3 } },
 };
 
 // ── Heuristic: straight-line Haversine distance ────────────────────────────
@@ -44,14 +62,21 @@ const aStarRoute = (startKey, goalKey, blockedEdges = new Set()) => {
   const openSet = new Map(); // key → { g, f, parent }
   const closedSet = new Set();
 
-  openSet.set(startKey, { g: 0, f: heuristic(startKey, goalKey), parent: null });
+  openSet.set(startKey, {
+    g: 0,
+    f: heuristic(startKey, goalKey),
+    parent: null,
+  });
 
   while (openSet.size > 0) {
     // Pick node with lowest f
     let current = null;
     let bestF = Infinity;
     for (const [key, state] of openSet) {
-      if (state.f < bestF) { bestF = state.f; current = key; }
+      if (state.f < bestF) {
+        bestF = state.f;
+        current = key;
+      }
     }
 
     if (current === goalKey) {
@@ -60,12 +85,17 @@ const aStarRoute = (startKey, goalKey, blockedEdges = new Set()) => {
       let node = current;
       while (node) {
         path.unshift(node);
-        node = openSet.get(node)?.parent ?? (closedSet.has(node) ? closedSet.get(node) : null);
+        node =
+          openSet.get(node)?.parent ??
+          (closedSet.has(node) ? closedSet.get(node) : null);
       }
       // Recalculate totalKm along path
       let totalKm = 0;
       for (let i = 0; i < path.length - 1; i++) {
-        totalKm += haversineDistance(GRAPH[path[i]].coord, GRAPH[path[i + 1]].coord);
+        totalKm += haversineDistance(
+          GRAPH[path[i]].coord,
+          GRAPH[path[i + 1]].coord
+        );
       }
       return { path, totalKm: Number(totalKm.toFixed(2)) };
     }
@@ -79,7 +109,10 @@ const aStarRoute = (startKey, goalKey, blockedEdges = new Set()) => {
       if (closedSet.has(neighbour)) continue;
       if (blockedEdges.has(`${current}:${neighbour}`)) continue;
 
-      const edgeKm = haversineDistance(GRAPH[current].coord, GRAPH[neighbour].coord);
+      const edgeKm = haversineDistance(
+        GRAPH[current].coord,
+        GRAPH[neighbour].coord
+      );
       const tentativeG = currentState.g + edgeKm * riskMultiplier;
       const existing = openSet.get(neighbour);
 
@@ -101,7 +134,8 @@ const aStarRoute = (startKey, goalKey, blockedEdges = new Set()) => {
  * @param {string[]} path
  * @returns {[number, number][]}
  */
-const pathToCoordinates = (path) => path.map((key) => GRAPH[key]?.coord).filter(Boolean);
+const pathToCoordinates = (path) =>
+  path.map((key) => GRAPH[key]?.coord).filter(Boolean);
 
 /**
  * Find the nearest graph node to a given [lat, lng] coordinate.
@@ -113,7 +147,10 @@ const nearestNode = (coord) => {
   let bestDist = Infinity;
   for (const [key, node] of Object.entries(GRAPH)) {
     const d = haversineDistance(coord, node.coord);
-    if (d < bestDist) { bestDist = d; best = key; }
+    if (d < bestDist) {
+      bestDist = d;
+      best = key;
+    }
   }
   return best;
 };

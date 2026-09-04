@@ -5,9 +5,19 @@ const createNotification = async (req, res) => {
   try {
     const notification = await Notification.create(req.body);
 
-    return apiResponse.success(res, 201, 'Notification created successfully', notification);
+    return apiResponse.success(
+      res,
+      201,
+      'Notification created successfully',
+      notification
+    );
   } catch (err) {
-    return apiResponse.error(res, 500, 'Failed to create notification', err.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to create notification',
+      err.message
+    );
   }
 };
 
@@ -15,7 +25,9 @@ const getUserNotifications = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const notifications = await Notification.find({ userId }).populate('userId');
+    const notifications = await Notification.find({ userId }).populate(
+      'userId'
+    );
 
     return apiResponse.success(
       res,
@@ -24,7 +36,12 @@ const getUserNotifications = async (req, res) => {
       notifications
     );
   } catch (err) {
-    return apiResponse.error(res, 500, 'Failed to fetch notifications', err.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to fetch notifications',
+      err.message
+    );
   }
 };
 
