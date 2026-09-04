@@ -12,11 +12,14 @@ Provides five AI/data endpoints for the SIH26002 prototype:
 All endpoints degrade gracefully if upstream services (Open-Meteo, Node.js API) are unavailable.
 """
 
+import asyncio
 import math
 import os
 import time
+from pathlib import Path
 from typing import Any, Optional
 
+import google.generativeai as genai
 import httpx
 import numpy as np
 from dotenv import load_dotenv
@@ -24,7 +27,18 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-load_dotenv()
+# Load environment from both local and root .env files
+_SERVER_DIR = Path(__file__).resolve().parent
+load_dotenv(_SERVER_DIR / ".env")
+load_dotenv(_SERVER_DIR.parent / ".env")
+
+# Configure Google Gemini SDK from environment variable
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+    except Exception as _e:
+        print(f"Warning: Failed to configure Google Generative AI SDK: {_e}")
 
 NODE_API_URL = os.getenv("NODE_API_URL", "http://localhost:5055/api")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -369,86 +383,53 @@ async def predict_risk(req: PredictRiskRequest):
 @app.post("/rag-query")
 async def rag_query(req: RagQueryRequest):
     """
-    RAG-powered admin assistant.
-    Reads data/silchar_history.txt, injects it into the LLM prompt context,
-    and queries LLM (Gemini/OpenAI) or local knowledge base engine.
+    RAG-powered admin assistant powered by Google Gemini SDK.
+    Reads data/silchar_history.txt as context, queries Google Gemini (gemini-1.5-flash),
+    and falls back gracefully to deterministic local synthesis if GEMINI_API_KEY is unset.
     """
     user_query = req.question.strip()
     if not user_query or len(user_query) < 3:
         raise HTTPException(status_code=400, detail="question must be at least 3 characters")
 
-    # Phase 2: Read contents of data/silchar_history.txt
+    # Read context from data/silchar_history.txt
     silchar_history = _load_silchar_history()
 
-    # Build prompt structure as specified:
-    # "You are an intelligent Logistics & Disaster Management AI Assistant for the NER region. Answer the user's question accurately using ONLY the following historical context.
-    # Context: {content_of_silchar_history.txt}
-    # User Question: {user_query}"
-    llm_prompt = (
-        "You are an intelligent Logistics & Disaster Management AI Assistant for the NER region. "
-        "Answer the user's question accurately using ONLY the following historical context.\n\n"
-        f"Context: {silchar_history}\n\n"
+    # Construct the exact prompt specified:
+    prompt = (
+        f"You are a Logistics AI for the North East Region. "
+        f"Use ONLY this context to answer the user: {silchar_history}. "
         f"User Question: {user_query}"
     )
 
     answer = None
     llm_provider = None
 
-    # 1. Attempt Gemini API if GEMINI_API_KEY is present
-    gemini_key = os.getenv("GEMINI_API_KEY")
+    # Connect directly to Google Gemini API using google.generativeai SDK
+    gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip()
     if gemini_key:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-                body = {
-                    "contents": [{"parts": [{"text": llm_prompt}]}],
-                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600},
-                }
-                resp = await client.post(url, json=body)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and "text" in parts[0]:
-                            answer = parts[0]["text"].strip()
-                            llm_provider = "gemini-1.5-flash-rag"
-        except Exception as exc:
-            print(f"Gemini API call error: {exc}")
+            genai.configure(api_key=gemini_key)
+            try:
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = await model.generate_content_async(prompt)
+            except Exception as e_flash15:
+                # Fallback to current generation flash model if 1.5 is 404
+                model = genai.GenerativeModel("gemini-2.5-flash")
+                response = await model.generate_content_async(prompt)
 
-    # 2. Attempt OpenAI API if OPENAI_API_KEY is present and not answered
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if not answer and openai_key:
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {openai_key}"},
-                    json={
-                        "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-                        "messages": [
-                            {"role": "user", "content": llm_prompt}
-                        ],
-                        "temperature": 0.2,
-                    },
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    choices = data.get("choices", [])
-                    if choices:
-                        answer = choices[0].get("message", {}).get("content", "").strip()
-                        llm_provider = "openai-rag"
+            if response and hasattr(response, "text") and response.text:
+                answer = response.text.strip()
+                llm_provider = f"google-gemini ({model.model_name})"
         except Exception as exc:
-            print(f"OpenAI API call error: {exc}")
+            print(f"Google Gemini SDK call error: {exc}")
 
-    # 3. If no external LLM key is configured or API fails, use local knowledge base engine
+    # Fallback to local knowledge base or incident telemetry if GEMINI_API_KEY unset or offline
     if not answer:
         silchar_ans = _answer_from_silchar_context(user_query, silchar_history)
         if silchar_ans:
             answer = silchar_ans
             llm_provider = "silchar-history-rag"
         else:
-            # Fallback to incident telemetry if question is about live operations/incidents
             incidents: list[dict] = []
             context = req.context or ""
             if not context:
