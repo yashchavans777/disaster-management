@@ -1,6 +1,149 @@
 Historical Disaster Data for Silchar and NER:
-- June-July 2025: Massive landslides at Jatinga Lampur Area (Dima Hasao) blocked the Lumding-Badarpur hill section with large boulders.
-- July 2025: Landslide between Dihaku and Mupa Stations (Kilometer 51/2-3) cut off Silchar, Tripura, and Mizoram.
-- September 2026: Soil erosion and track washout occurred on the Jamira (Assam) to Bairabi (Mizoram) section (Katakhal-Bairabi stretch) due to heavy rain.
-- 2022-2024 (Recurring): Major floods in Silchar are caused by Barak River embankment breaches, specifically at the Berenga Betukandi Area (The Epicenter).
-- 2026 Status: National Highway cross-drainage blockages due to 4-lane highway and flyover construction have stopped natural water flow, causing prolonged urban flooding near highways.
+Location: Silchar is located in the southernmost part of Assam.
+Longitude: 92°24′ E to 93°15′ E.
+Latitude: 24°22′ N to 25°08′ N.
+Elevation: Approximately 35 metres above mean sea level.
+Terrain: Silchar lies on an alluvial flat plain.
+Landscape: The area contains:
+Swamps
+Streams
+Small isolated hills locally called “Tilla”
+Major Rivers:
+Barak River
+Ghagra River
+Seismic Zone: Silchar falls under Seismic Zone V, indicating a very high earthquake-risk area.
+Historical Earthquake Risk: Silchar has experienced several major earthquakes.
+Major Earthquakes:
+1869: Magnitude 7.5 – caused heavy damage.
+1947: Magnitude 7.7.
+1957: Magnitude 7.0.
+1984: Magnitude 6.0.
+Disaster Management Importance: Due to its Zone V seismic classification, low-lying alluvial terrain, swamps, streams, and river systems, Silchar requires strong earthquake preparedness, flood management, early-warning systems, evacuation planning, and emergency response infrastructure.
+*2022 flood report-
+ 1) Basic profile – Silchar city and Barak River
+City: Silchar (headquarters of Cachar district, Assam, Barak Valley).
+
+Approximate coordinates: 24.82° N, 92.80° E; elevation ~22 m above MSL.
+
+Setting: Located on the Barak River floodplain; main town lies about 1 km from the Barak River embankment that failed in 2022.
+
+Administrative units: Cachar district has 5 revenue circles – Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond; 198 of 867 villages are classified as flood‑prone.
+
+2) Barak River – storage / discharge context (official basin data)
+Basin: Barak and Others Basin (covers parts of Assam, Manipur, Mizoram, Tripura, Meghalaya, Nagaland).
+
+Average annual water potential: 48.36 BCM (billion cubic metres).
+
+Mean annual rainfall (basin): ~2,083.5 mm; some north‑western and south‑western parts receive 5,000–6,000 mm annually.
+
+Maximum recorded discharge (Barak stretch): about 7,786 m³/s (used in planning documents).
+
+Key gauge near Silchar: Annapurnaghat (Silchar) on Barak River; Highest Flood Level (HFL) recorded 21.84 m in 1989.
+
+Storage note: There is no major upstream reservoir directly regulating Barak flows at Silchar; flood peaks are mainly due to monsoon runoff from hills and tributaries (Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal, etc.).
+
+3) 2022 Silchar flood – timeline with affected areas (date & time wise)
+First flood wave (May 2022)
+14 May 2022: Barak River crosses danger level (DL) for the first time in the season.
+
+19 May 2022: Embankment breach at Berenga (Berenga point) upstream of Silchar; floodwater enters Mahisha Beel / Maheesha Beel and low‑lying peripheries.
+
+23 May 2022: River level falls below DL, ending the first wave, but the breach leaves the system vulnerable.
+
+Affected areas (first wave):
+
+Villages across Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond revenue circles reported affected.
+
+Berenga–Mahisha Beel corridor identified as a key entry point for floodwater into Silchar’s low‑lying zones.
+
+Second flood wave – main urban flood (June 2022)
+18 June 2022: Barak River again crosses danger level (from ~19.62 m to 20.98 m in 24 hours).
+
+19 June 2022 (~midnight): Major dyke/embankment breach at Bethukandi (Bethkundi) on Barak River, ~1 km from Silchar town; town begins to submerge.
+
+19–30 June 2022: Silchar remains under water for ~11 days; water depth up to 12 ft (≈3.7 m) in some localities; roughly 90% of the town reported inundated.
+
+Urban areas affected (June 2022, official list):
+
+26 out of 28 wards of Silchar Town affected.
+
+Specific localities named in ASDMA/DDMA reports as severely impacted on 26 June 2022:
+
+National Highway road (NH corridor through Silchar)
+
+Ambicapatty
+
+Church Road
+
+Chandicharan Road
+
+Bilpar
+
+Public School Road
+
+Subhas Nagar
+
+N.S. Avenue
+
+Kanakpur
+
+These areas fall mainly under Silchar Sadar revenue circle, which recorded 196 affected villages in the 2022 cumulative count.
+
+Extended inundation (July 2022)
+By mid‑July 2022: ISRO/NRSC flood maps confirm extensive inundation across Cachar, including Silchar, Lakhipur, Katigorah, Udharbond, Sonai circles.
+
+Cumulative (14 May–30 June 2022):
+
+607 of 868 villages in Cachar affected.
+
+Revenue‑circle breakdown (villages affected):
+
+Silchar Sadar: 196
+
+Lakhipur: 58
+
+Sonai: 161
+
+Katigorah: 152
+
+Udharbond: 40
+
+4) National Highway affected – exact identification
+National Highway affected: NH 6 (old numbering; now part of renumbered NH 27 corridor) passing through Silchar.
+
+Affected stretch: The Silchar town section along the National Highway road is explicitly listed among the worst‑hit urban areas in ASDMA’s 26 June 2022 flood report.
+
+Nature of impact:
+
+Urban flooding along the NH 6 corridor due to blocked cross‑drainage, over‑topping/weak embankments, and water entering from breached sections near the city.
+
+Resulted in prolonged waterlogging and traffic disruption on the Silchar–NH 6 stretch during 19–30 June 2022.
+
+5) Human impact summary (for project background)
+Population of Cachar district: ~17.36 lakh.
+
+People affected (district‑wide, 2022): ~14.31 lakh (1,431,654).
+
+Urban impact: 26/28 wards of Silchar Town affected.
+
+Evacuations (19–29 June 2022): About 70,014 people shifted to relief camps.
+
+Relief camps: 292 relief centers / camps operated in the district.
+
+6) Compact point‑wise timeline (for quick reference in project)
+14 May 2022: Barak crosses danger level – first flood wave begins.
+
+19 May 2022: Berenga embankment breach → floodwater enters Mahisha Beel and nearby low areas.
+
+23 May 2022: River falls below danger level – first wave ends.
+
+18 June 2022: Barak again crosses danger level – second wave starts.
+
+19 June 2022 (~midnight): Bethukandi dyke breach (~1 km from Silchar) → town starts submerging.
+
+19–30 June 2022: 26/28 wards of Silchar under water; key areas: National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur.
+
+July 2022: Extended inundation; NRSC maps show large parts of Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond inundated.
+
+NH affected: NH 6 (Silchar town section) explicitly listed as flooded on 26 June 2022.
+
