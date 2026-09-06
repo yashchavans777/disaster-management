@@ -1259,6 +1259,173 @@ Event 2: Peak Monsoon Active Landslides (June 18–24, 2024)
    * Short-Terminated Lines: Kanchanjunga Express and Secunderabad–Silchar Express terminated prematurely at Lumding due to track damage.
 
 
+--------2021 flood-------
+------Silchar and Cachar------
+
+
+1) Basic Context – 2021 Flood Hazards in Silchar
+Year: 2021.
+Main hazard: Floods (Barak River and urban flash floods).
+City: Silchar (Cachar district, Assam, Barak Valley).
+Coordinates: ~24.82° N, 92.80° E; elevation ~22–35 m above MSL.
+Setting: Located on the Barak River floodplain; main town lies close to the Barak River embankment that has repeatedly failed in 2021, 2022, and 2023.
+Administrative units: Cachar district has 5 revenue circles – Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond; ~198 of 867 villages are classified as flood‑prone.
+Terrain: Alluvial flat plain with swamps, streams, and small isolated hills (“Tilla”).
+Major rivers influencing floods: Barak River and its tributaries (Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal, etc.).
+Seismic zone: Silchar falls under Seismic Zone V (very high earthquake risk), which makes flood‑damaged structures more vulnerable if any seismic event occurs during/after floods.
+
+2) Barak River – Flood Monitoring Context for 2021
+Basin: Barak and Others Basin (covers parts of Assam, Manipur, Mizoram, Tripura, Meghalaya, Nagaland).
+Average annual water potential: 48.36 BCM (billion cubic metres).
+Mean annual rainfall (basin): ~2,083.5 mm; some north‑western and south‑western parts receive 5,000–6,000 mm annually.
+Maximum recorded discharge (Barak stretch): about 7,786 m³/s (used in planning documents).
+Key gauge near Silchar: Annapurnaghat (Silchar) on Barak River; Highest Flood Level (HFL) recorded 21.84 m in 1989.
+Danger Level (DL): Defined by Central Water Commission (CWC) for Annapurnaghat; exact numeric DL/HFL values are displayed on the CWC flood forecasting portal (ff.cwc.gov.in) and in daily flood bulletins.
+Storage note: There is no major upstream reservoir directly regulating Barak flows at Silchar; flood peaks are mainly due to monsoon runoff from hills and tributaries (Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal, etc.).
+2021 context: During the 2021 monsoon, Barak River ne multiple times Danger Level cross kiya; Cachar district me severe flooding report hua; ISRO/NRSC flood maps ne extensive inundation confirm kiya.
+
+3) 2021 Flood Timeline – Silchar / Cachar (Date‑Wise, Expanded)
+First Flood Wave (May–Early June 2021)
+May 2021: Pre‑monsoon heavy rainfall ne Barak River aur uske tributaries me water level badhaya.
+Early June 2021: First flood wave start hua; Cachar district me low‑lying villages aur Silchar town ke kuch wards affect hue.
+Affected urban locations: National Highway area, Link Road, Ambicapatty, N.S. Avenue, Sonai Road.
+Approx. 8,000–10,000 residents in Silchar town reported disrupted by waterlogging and inundation.
+Statewide: Early June tak ~20,000–25,000 people affected across multiple districts including Cachar; ~80–100 villages underwater; about 800–1,000 ha crop area damaged.
+
+Second Flood Wave (Mid–Late June 2021)
+Mid‑June 2021: Heavy rainfall intensify hua; Barak River ne Danger Level (DL) cross kiya Annapurnaghat gauge par.
+18–25 June 2021: Flood situation worsen hua; Cachar reported among affected districts along with Lakhimpur, Dhemaji, etc.
+Urban impact in Silchar: Low‑lying wards near the Barak embankment (including areas around Berenga–Betukandi) experience inundation.
+Key localities affected: National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road.
+Water depth: In several low‑lying pockets, water depth reached 2–4 feet; in worst‑affected depressions near the embankment, locally higher depths report hue.
+Duration: Many wards remained under water for 5–8 days; some areas faced repeated inundation as Barak levels fluctuated.
+
+Extended Inundation & Second Monsoon Peak (July–August 2021)
+July 2021: Continued heavy rainfall maintain high water levels in Barak and tributaries; ISRO/NRSC flood maps show extensive inundation across Cachar, including Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond circles.
+August 2021: Second major flood wave in Assam; multiple districts re‑inundated.
+By late August 2021: Statewide ~1.20–1.40 lakh people affected; ~6,000–7,000 ha cropland under water; ~80,000–1.00 lakh animals affected. Cachar remains in the flood‑prone list.
+Silchar town: Fresh waterlogging reported in the same core areas (National Highway road, Ambicapatty, N.S. Avenue, Link Road, Sonai Road) during peak rainfall days in July–August.
+Rural Cachar: Multiple villages in Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond circles reported standing water on fields and approach roads, affecting daily commute and supply movement.
+
+Cumulative 2021 Impact (Cachar District, Flood Focus)
+People affected (district‑wide, 2021): Cachar contributes significantly to the state total; Silchar town alone had ~8,000–10,000 residents disrupted in early June 2021, aur mid–late June me additional thousands affect hue.
+Villages affected: Multiple villages in the Barak floodplain, especially in Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond; Berenga–Betukandi embankment zone identified as a breach‑prone area.
+Crop area damaged: Significant paddy and vegetable cropland in Cachar floodplain; statewide crop damage in 2021 ranged from ~800–1,000 ha (early June) to ~6,000–7,000 ha (August).
+Livestock impact: Part of the 80,000–1.00 lakh animals affected statewide includes livestock in Cachar’s flood‑prone villages; temporary shelters were arranged on raised ground.
+Infrastructure impact: Repeated flooding damaged kutcha houses, weakened embankments, and disrupted power and communication lines in low‑lying Silchar wards and surrounding villages.
+
+4) Exact Highways, Roads & Local Areas Affected by Floods in Silchar (2021, Expanded)
+National Highways Affected by Floods in 2021
+NH‑6 (Old Numbering; Part of NH‑27 Corridor) – Silchar–Guwahati Route
+Stretch affected: Silchar town section along National Highway road (main NH‑6 corridor passing through Silchar).
+June–August 2021: Urban flooding along the NH‑6 corridor in Silchar due to blocked cross‑drainage, over‑topping/weak embankments, and water entering from breached sections near the city.
+Result: Prolonged waterlogging and traffic disruption on the Silchar–NH‑6 stretch during peak flood days in June–August 2021.
+Logistics impact: Trucks carrying food grains, vegetables, construction material, and medical supplies faced delays; local transport (auto, e‑rickshaw) movement slowed considerably.
+
+Major Local Roads & Corridors Affected in Silchar Town by Floods (2021, Expanded)
+National Highway Road (NH corridor through Silchar) – Part of NH‑6/NH‑27 passing through the city; severely waterlogged and disrupted during June–August 2021. Market shops and warehouses along this stretch faced access issues.
+Link Road – Key internal connector in Silchar; reported urban flash flooding in June 2021. Residents reported difficulty in commuting to schools, markets, and hospitals during peak flood hours.
+Ambicapatty – Major market and residential zone; affected in June 2021 flash floods. Several shops and godowns reported water entering premises; temporary closure of some businesses during peak inundation.
+N.S. Avenue – Important commercial and residential road; impacted in June 2021. Vehicles faced slow movement; some two‑wheelers and small autos could not pass during high water.
+Sonai Road – Connects Silchar to Sonai circle; affected by urban flooding and waterlogging in June 2021. Approach to several villages from Silchar side became difficult; relief vehicles had to move slowly.
+Church Road – Central Silchar locality; affected during 2021 monsoon floods. Residents reported water stagnation for several hours to days after heavy rain.
+Chandicharan Road – Core Silchar road; impacted in 2021 floods. Local transport routes were diverted; some pedestrian movement shifted to raised footpaths.
+Bilpar – Low‑lying residential area; vulnerable in 2021 floods. Houses near nullahs reported seepage and water entering ground floors.
+Public School Road – Impacted in 2021 urban flooding. Schools in this corridor reported temporary disruption or early closure on heavy rain days.
+Subhas Nagar – Residential locality; affected in 2021. Residents shifted valuables to upper floors; some families moved temporarily to relatives’ houses on higher ground.
+Kanakpur – Locality on the periphery of Silchar town; affected during 2021 inundation. Approach roads reported waterlogging; local boats and informal rafts were used in worst pockets.
+
+Embankment & Breach Locations Directly Affecting Roads & Localities (2021 Floods, Expanded)
+Berenga–Betukandi (Bethukandi) Embankment Zone
+Location: On the Barak River, about 1 km from Silchar town.
+2021: Low‑lying wards near the Barak embankment, especially around Berenga–Betukandi, experience inundation during June–August 2021 floods.
+Same set of localities (National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road) report fresh flooding.
+Mechanism: When Barak water level rises above Danger Level, pressure on the embankment increases; seepage and minor breaches cause water to flow into Mahisha Beel and adjacent low areas, which then spill into Silchar’s peripheral wards.
+
+Other identified weak embankment stretches (from 2021–2023 pattern)
+Berenga Part‑III.
+Karatigram breach, Shimultala, Rongpur, Udharbond.
+These are known weak points that can flood adjacent villages and approach roads during monsoon; 2021 me bhi in areas me vigilance badha di gayi thi.
+Implication for AI: These stretches should be treated as high‑risk zones for pre‑positioning relief material (food, medical kits, tarpaulins, sandbags) before IMD Red Alert days.
+
+Village‑Level & Revenue Circle Impact (Road Access Implications) – 2021 Flood Pattern, Expanded
+Revenue circles in Cachar (flood‑prone)
+Silchar Sadar: 2021 me extensive inundation report hua; villages connect to Silchar via NH‑6, Link Road, Sonai Road, and internal roads; flooding cuts off rural–urban supply chains. Daily wage workers from these villages faced loss of income during flood days.
+Lakhipur: 2021 me flood‑prone; NH‑6 aur internal roads se connected; flood damage se agricultural produce aur relief material movement disrupt hota hai. Paddy fields near the river reported standing water for weeks.
+Sonai: 2021 me inundation se multiple villages Silchar se isolate. Some villages relied on country boats for last‑mile connectivity during peak floods.
+Katigorah: 2021 me district roads aur NH‑6 spur routes se Silchar se connected; floods se evacuation aur supply routes block. Relief camps in this circle hosted families from worst‑affected villages.
+Udharbond: 2021 me Silchar–Haflong highway ke approach par; floods se hill–valley logistics affect. Some villages reported damage to kutcha houses and temporary shelters on raised platforms.
+
+In 2021, the same circles (Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond) are reported as inundated in ISRO/NRSC flood maps and ASDMA bulletins, implying repeated disruption of the same road network by floods.
+
+5) Human Impact Summary – 2021 Floods (for Project Background, Expanded)
+Population of Cachar district: ~17.36 lakh.
+People affected (district‑wide, 2021 floods): Cachar is listed among the flood‑affected districts in June–August 2021 bulletins; Silchar town alone had ~8,000–10,000 residents disrupted in early June 2021, aur mid–late June me additional thousands affect hue.
+Urban impact: Multiple wards of Silchar Town affected, especially low‑lying areas near the Barak embankment and Berenga–Betukandi zone.
+Evacuations & relief camps (2021 floods): During peak flood periods, relief camps and distribution centres operated across Assam; early reports suggest ~70–90 relief camps statewide active in flood‑affected districts. Cachar uses schools, community halls, and elevated government buildings as camps.
+Relief distribution norms (ASDMA / NDRF, flood camps): Typical per‑person daily ration in camps: ~0.85 kg rice, 0.15 kg dal, 0.20 kg salt, 0.15 L mustard oil (as used in 2021 relief operations).
+Health impact: Increased risk of waterborne diseases (diarrhoea, skin infections) in flooded wards; local hospitals and PHCs reported higher patient load during and immediately after flood peaks.
+Livelihood impact: Daily wage labourers, small shopkeepers, and transport workers in affected Silchar localities reported loss of work days during June–August 2021 floods.
+
+6) Government & Local Precautions – 2021 Floods (DDMA / ASDMA, Expanded)
+DDMA Cachar + ASDMA + NDMA ne 2021 monsoon se pehle pre‑monsoon preparedness meetings conduct kiye:
+Identification of vulnerable embankments (Bethukandi dyke, Berenga Part‑III, Karatigram, Shimultala, Rongpur, Udharbond).
+Pre‑positioning of relief material (food, medical kits, tarpaulins, sandbags) in district warehouses.
+Coordination with NDRF/SDRF for rapid response.
+
+During actual 2021 floods:
+Relief camps and distribution centres opened across Assam; Cachar uses schools, community halls, and elevated government buildings.
+NDRF / SDRF / local forces deployed for rescue, evacuation, and relief distribution.
+Boats deployed for rescue in worst‑affected villages (Sonai, Lakhipur circles).
+
+Local precautions (standard operating practices in 2021 floods):
+Shifting families and livestock to highlands / raised platforms.
+Using country boats for movement and rescue.
+Storing dry food, drinking water, medicines, and torches before IMD Red Alert days.
+Avoiding travel on flood‑prone roads (NH‑6 through Silchar, Link Road, Ambicapatty, N.S. Avenue, Sonai Road) during heavy rain alerts.
+
+Community actions:
+Residents in low‑lying wards pre‑emptively shifted valuables and electrical appliances to upper floors; some families moved temporarily to relatives’ houses on higher ground before forecasted heavy rain.
+Local youth groups assisted in relief distribution and boat operations.
+
+7) Monthly Supply Chain Demand (Food, Medical, Construction) – 2021 Flood Context (Indicative, Expanded)
+For a scenario of ~20,000 affected persons in Cachar/Silchar during peak 2021 floods:
+Food & rations: Norm ~0.55 kg food grains + pulses/oil per person per day. Monthly requirement: 20,000 × 0.55 × 30 ≈ 330,000 kg (330 tonnes) of grains/pulses/oil equivalent per month. This includes rice, dal, salt, and edible oil as per ASDMA/NDRF norms.
+Medical & emergency supplies: Basic trauma kits, ORS, antibiotics, antipyretics, water purification tablets, mosquito nets. Indicative norm: 1 basic medical kit per 50 affected persons per month → 20,000 / 50 = 400 kits/month. Additional needs include chlorine tablets for drinking water and basic first‑aid material for cuts and infections.
+Construction & relief material: Tarpaulins, ropes, sandbags, bamboo, CGI sheets, temporary shelter material. Assuming 4 persons/family: 5,000 families → ~5,000 tarpaulins. Sandbags: 10 sandbags per metre of vulnerable embankment (for critical stretches like Berenga–Betukandi). Bamboo and CGI sheets used for temporary raised platforms and shelters in waterlogged villages.
+Logistics implication: These supplies must be pre‑positioned in warehouses near Silchar (e.g., on higher ground, away from Barak floodplain) so that when NH‑6 or local roads get waterlogged, last‑mile distribution can still happen via smaller vehicles and boats.
+Scalability: These estimates can be scaled up/down by your AI based on real‑time affected population from ASDMA/CWC/IMD inputs (e.g., if 50,000 people are affected, food requirement scales to ~825 tonnes/month).
+
+8) Compact Point‑Wise Timeline – 2021 Floods (for Quick Reference in Project, Expanded)
+May 2021: Pre‑monsoon heavy rainfall; Barak River aur tributaries me water level badha.
+Early June 2021: First flood wave; ~8,000–10,000 Silchar residents affected; ~20,000–25,000 statewide; ~80–100 villages underwater.
+Mid–Late June 2021: Barak crosses Danger Level; Cachar among affected districts; key localities (National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road) affected.
+July 2021: Extended inundation; NRSC maps show large parts of Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond inundated.
+August 2021: Second major flood wave; statewide ~1.20–1.40 lakh people affected; ~6,000–7,000 ha cropland under water.
+NH affected (2021 floods): NH‑6 (Silchar town section) faced prolonged waterlogging and traffic disruption during peak flood days in June–August 2021.
+Relief response: DDMA/ASDMA pre‑monsoon preparedness; relief camps and distribution centres operated during peak floods; locals shift to highlands and use country boats.
+Key localities repeatedly affected: National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road.
+Key embankment zone: Berenga–Betukandi (Bethukandi) on Barak River, ~1 km from Silchar town.
+
+9) Reasons of Floods in 2021 – Silchar and Cachar
+Heavy monsoon rainfall (May–August 2021; multiple Yellow/Orange alerts).
+
+Barak River water level rise above Danger Level (Annapurnaghat gauge).
+
+Embankment weakness and inundation (Berenga–Betukandi zone; seepage and over‑topping).
+
+Blocked cross‑drainage structures (NH‑6 corridor, internal drains, nullahs).
+
+Riverbed siltation and reduced river capacity (Barak River and tributaries).
+
+Upstream water release and runoff from hills (Manipur, Mizoram, Meghalaya; tributaries Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal).
+
+Urban planning issues and encroachments (unplanned construction, drain encroachments, weak embankments).
+
+Terrain and landscape factors (alluvial flat plain, swamps, streams, small hills “Tilla”).
+
+Seismic Zone V vulnerability (flood‑damaged structures more vulnerable to earthquakes)
+
 
 
 
