@@ -19,6 +19,7 @@ Major Earthquakes:
 1957: Magnitude 7.0.
 1984: Magnitude 6.0.
 Disaster Management Importance: Due to its Zone V seismic classification, low-lying alluvial terrain, swamps, streams, and river systems, Silchar requires strong earthquake preparedness, flood management, early-warning systems, evacuation planning, and emergency response infrastructure.
+-----------2022 all disaster reports--------
 *2022 flood report-
  1) Basic profile – Silchar city and Barak River
 City: Silchar (headquarters of Cachar district, Assam, Barak Valley).
@@ -145,5 +146,193 @@ Relief camps: 292 relief centers / camps operated in the district.
 
 July 2022: Extended inundation; NRSC maps show large parts of Silchar Sadar, Lakhipur, Sonai, Katigorah, Udharbond inundated.
 
-NH affected: NH 6 (Silchar town section) explicitly listed as flooded on 26 June 2022.
+NH affected: NH 6 (Silchar town section) explicitly listed as flooded on 26 June 2022.NH-6 (Old numbering: NH-44, currently designated as NH-27 / NH-37 corridor connecting Silchar to Meghalaya, Assam mainland, and Tripura/Mizoram).Exact Affected Stretches:Silchar Town Section (National Highway Road Corridor): Complete urban submergence under $4–6\text{ feet}$ of water, blocking inter-state connectivity.Silchar–Mahur / Lumding Stretch (NH-27 / Old NH-54): Disrupted by landslide washouts along the Cachar–Dima Hasao border section.VIP Road / Airport Connector Section: Submerged and eroded by runoff near the Madhura River confluence.
 
+*disaster faced by Silchar in 2022 – the pre‑monsoon thunderstorm / hailstorm -
+1) Event Overview & Meteorological Parameters
+
+Disaster Classification: Severe Pre-Monsoon Thunderstorm, Hailstorm, and High-Speed Squall Line (Local Term: Kalbaishakhi).
+
+Primary Occurrence Window: April 14 – April 16, 2022 (Pre-monsoon peak convective season).
+
+Peak Wind Speeds: Recorded at 65–85 km/h during localized microbursts and squall lines.
+
+Precipitation Intensity: Rainfall surpassed 120 mm within a 12-hour window, accompanied by severe localized hailstorms across Cachar district.
+
+2) Human, Household & Agricultural Impact Data
+
+Affected District Population: ∼85,000–110,000 individuals across urban and rural belts in Cachar.
+
+Human Casualties: 4 recorded fatalities (caused by wall collapses, uprooted trees, and electrocution from fallen power cables) and over 35 reported injuries.
+
+Residential Infrastructure Damage:
+
+Fully Destroyed Structures: ∼1,200+ kutcha houses and temporary roofs.
+
+Partially Damaged Structures: ∼4,500+ residential units, commercial tin sheds, and signboards.
+
+Agricultural Impact: Over 3,200 hectares of standing pre-kharif crops and horticultural plantations (paddy, vegetables, betel nut orchards) flattened across Cachar.
+
+3) City-Level Affected Localities (Silchar Town)
+
+Tarapur & Railway Station Zone: Massive tree uprooting and roof damage causing temporary blockage of station access roads.
+
+Fatak Bazar (Main Commercial Hub): Heavy structural damage to temporary shop stalls, signboards, and commercial roofing; localized flash waterlogging.
+
+Ambicapatty, Link Road, & Rangirkhari: High-voltage transmission wire snags and downed power poles resulting in a 36-hour urban power blackout.
+
+Srikona & Silchar Bypass Belt: Heavy tree branches and structural debris blocked primary municipal arterial corridors.
+
+4) Affected National Highways & Transport Corridors
+
+Primary Affected National Highway: NH-6 (Connecting Silchar to Meghalaya and Guwahati) and NH-27 (East-West Corridor connecting Silchar to Haflong/Lumding via Dima Hasao).
+
+Exact Impacted Stretches:
+
+NH-6 (Silchar–Badarpur Section): Disrupted traffic movement due to multiple uprooted large banyan trees and downed electricity poles spanning across the road lanes.
+
+NH-27 (Silchar–Udarbond–Kalain Stretch): Traffic blocked by debris from roadside structures and localized soil erosion along shoulder embankments.
+
+Secondary Feeder Routes: Silchar–Hailakandi Road and Silchar–Kalain Road experienced multi-hour closures due to fallen utility infrastructure.
+
+5) Compound Vulnerability Creation (Pre-Flood Context)
+
+Utility Network Collapse: Structural damage to transformers and the high-voltage grid delayed maintenance operations right before the May monsoon onset.
+
+Geotechnical Pre-Conditioning: Heavy pre-monsoon precipitation saturated topsoil layers across Cachar's embankments, reducing soil shear strength ahead of the June Barak River breaches.
+
+*Earthquakes in 2022 -
+2022 Earthquake Events – Silchar (Cachar), Assam: Point‑to‑Point Data
+Event 1
+
+Date & time: 17 January 2022, 02:11 IST
+
+Magnitude: M 3.5
+
+Epicentre: Cachar, Assam (≈ 24.70° N, 92.72° E)
+
+Depth: 35 km
+
+Affected areas: Silchar town and surrounding Cachar villages (tremors felt)
+
+Casualties: None reported
+
+Building damage: None reported
+
+Roads affected: No official report of damage/closure of any road (including NH 6/NH 27, city roads, rural roads)
+
+Event 2
+
+Date & time: 30 October 2022, ~20:15 IST
+
+Magnitude: M 4.3
+
+Epicentre: Near Karimganj, Assam (Barak Valley)
+
+Depth: ~10 km
+
+Distance from Silchar: ~50–70 km
+
+Affected areas: Tremors felt in Karimganj, Hailakandi, Silchar (Cachar) and other Barak Valley towns
+
+Casualties: None reported in Silchar / Cachar
+
+Building damage: None reported in Silchar
+
+Roads affected: No official report of damage/closure of NH 6/NH 27, state highways, or city roads in Silchar due to this quake
+
+* landslides in 2022-
+
+A. May 2022 – Dima Hasao Cluster Landslides (Affecting Silchar Connectivity)
+Dates: 11–18 May 2022.
+
+Area: Dima Hasao district (Haflong town and surrounding hills), on the main hill route to Silchar.
+
+Trigger: Heavy rainfall:
+
+Up to 156 mm in 24 hours at Haflong on 11 May 2022.
+
+About 200 mm of antecedent rainfall in 4 days, saturating slopes and triggering failures.
+
+Scale: 5,178 landslides mapped via satellite imagery across Dima Hasao during this event.
+
+Casualties: 3 landslide deaths reported in Dima Hasao.
+
+Roads affected:
+
+Lumding–Silchar highway damaged at multiple places by landslides and debris flows.
+
+Lumding–Badarpur rail section blocked by landslides and waterlogging; 2 trains stranded, around 2,800 passengers evacuated.
+
+New Haflong railway station – platforms and tracks buried by multiple debris flows (simulations suggest around 4 m of debris accumulation), disrupting rail services to Silchar.
+
+People affected:
+
+By 17 May 2022, 32,959 people evacuated across affected Assam districts.
+
+Haflong / Dima Hasao had access problems due to landslides.
+
+2,887 houses damaged statewide (many in hill areas) by 17 May 2022.
+
+Districts affected (flood + landslide): 20 districts, including Cachar and Dima Hasao, under flood/landslide stress in this phase.
+
+B. April–May 2022 – Barak Valley Landslides (Cachar, Karimganj, Hailakandi)
+Period: Pre‑monsoon 2022 (heavy showers).
+
+Districts: Cachar (Silchar district), Karimganj, Hailakandi (Barak Valley).
+
+Casualties:
+
+At least 21 landslide deaths in Barak Valley in one major spell.
+
+Cachar (Lakhipur): 7 deaths – e.g. Tolapur village (debris fell on houses).
+
+Hailakandi: 8 deaths – e.g. Mohonpur reserved area, Bowarthal.
+
+Karimganj: 6 deaths – e.g. Barthal area.
+
+Affected areas (villages / localities):
+
+Cachar: Tolapur village and surrounding areas in Lakhipur revenue circle.
+
+Hailakandi: Mohonpur reserved area (Hailakandi circle) and Bowarthal (Algapur circle).
+
+Karimganj: Barthal and surrounding hill villages.
+
+Roads affected:
+
+Rural and inter‑district roads connecting:
+
+Silchar – Lakhipur – hill areas
+
+Silchar – Hailakandi
+
+Silchar – Karimganj (via hilly stretches)
+faced landslide debris, fallen trees, and temporary blockages.
+
+Lumding–Silchar highway repeatedly damaged and blocked by landslides, affecting supply routes into Silchar.
+
+C. June–July 2022 – Flood‑Related Landslides (Assam & Barak Valley)
+Period: June–July 2022 (second flood wave).
+
+Statewide landslide deaths: 18 of 179 total flood/landslide deaths in Assam by early July 2022 were due to landslides.
+
+District‑wise landslide deaths (2022 cumulative, official):
+
+Cachar: 3 landslide deaths (plus 45 flood deaths).
+
+Dima Hasao: 4 landslide deaths.
+
+Hailakandi: 2 landslide deaths.
+
+Karimganj: 2 landslide deaths.
+
+Infrastructure impact:
+
+5,370 roads affected statewide (PWD + rural roads) during the 2022 flood–landslide season.
+
+543 road breaches and numerous culvert/bridge damages reported, many in hilly and semi‑hilly stretches that feed into Silchar.
+
+Connectivity to Silchar:
+
+Repeated landslide‑related disruptions on hill highways (especially Lumding–Silchar and other Barak Valley hill roads) caused supply shortages and price rises for vegetables and grains in Cachar, Karimganj, and Hailakandi
