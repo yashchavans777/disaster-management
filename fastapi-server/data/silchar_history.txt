@@ -476,6 +476,100 @@ Relief response: DDMA/ASDMA conduct mock drill in April 2023; relief camps and d
 Key localities repeatedly affected: National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road.
 Key embankment zone: Berenga–Betukandi (Bethukandi) on Barak River, ~1 km from Silchar town.
 
+----Reasons of Floods in 2023 – Silchar and Cachar (Based or 2023 Flood Data)---
+1) Heavy Monsoon Rainfall (Primary Trigger)
+12–14 June 2023: Heavy rainfall over Cachar triggered urban flash floods in Silchar town.
+
+Mid‑June 2023: Cachar listed among 12 flood‑affected districts in Assam during the first wave.
+
+20–22 June 2023: Flood situation intensified; Cachar again reported among worst‑hit districts.
+
+July–August 2023: Continued heavy rainfall maintained high water levels in Barak and tributaries; second major flood wave in Assam.
+
+IMD alerts: Multiple Yellow and Orange alert days for thunderstorm, lightning, and gusty winds; heavy rainfall days accompanied by thunder and lightning.
+
+Rainfall pattern: Persistent heavy rainfall over Cachar district; upstream areas (Manipur, Mizoram, Meghalaya) also received heavy rainfall, increasing runoff into Barak River.
+
+2) Barak River Water Level Rise Above Danger Level
+Key gauge: Annapurnaghat (Silchar) on Barak River; Highest Flood Level (HFL) recorded 21.84 m in 1989.
+
+Danger Level (DL): Defined by Central Water Commission (CWC); when Barak water level rises above DL, pressure on embankments increases.
+
+2023 context: During the 2023 monsoon, multiple rivers across India (including in the northeast) breached or equalled previous HFLs, indicating that Silchar’s historical HFL is frequently tested in extreme years.
+
+Mechanism: When Barak water level rises above Danger Level, seepage and minor over‑topping cause water to flow into Mahisha Beel and adjacent low areas, which then spill into Silchar’s peripheral wards.
+
+3) Embankment Weakness and Re‑inundation (No Major Breach, but Vulnerability)
+Berenga–Betukandi (Bethukandi) Embankment Zone:
+
+Location: On the Barak River, about 1 km from Silchar town.
+
+2023: Low‑lying wards near the Barak embankment, especially around Berenga–Betukandi, experienced re‑inundation during June–August 2023 floods.
+
+Same set of localities (National Highway road, Ambicapatty, Church Road, Chandicharan Road, Bilpar, Public School Road, Subhas Nagar, N.S. Avenue, Kanakpur, Link Road, Sonai Road) reported fresh flooding.
+
+Other identified weak embankment stretches (from 2023 mock drill):
+
+Berenga Part‑III.
+
+Karatigram breach, Shimultala, Rongpur, Udharbond.
+
+These are simulated breach sites in the April 2023 DDMA/ASDMA mock drill and represent known weak points that can flood adjacent villages and approach roads during monsoon.
+
+No major breach reported in 2023: Unlike 2022 (Bethukandi dyke breach), 2023 me major breach nahi hua, lekin seepage aur minor over‑topping se water low‑lying areas me ghusa.
+
+4) Blocked Cross‑Drainage Structures
+NH‑6 (Silchar town section): Urban flooding along the NH‑6 corridor in Silchar due to blocked cross‑drainage, over‑topping/weak embankments, and water entering from breached sections near the city.
+
+Internal drains and nullahs: Several internal drains and nullahs overflowed, causing street‑level flooding in central Silchar.
+
+Result: Prolonged waterlogging and traffic disruption on the Silchar–NH‑6 stretch during peak flood days in June–August 2023.
+
+Local observation: Water entered low‑lying wards near the Barak embankment; several internal drains and nullahs overflowed, causing street‑level flooding in central Silchar.
+
+5) Riverbed Siltation and Reduced River Capacity
+Barak River and tributaries: Siltation badhne se river capacity kam ho gayi; normal rainfall bhi flood-like situation create karne laga.
+
+Maximum recorded discharge: About 7,786 m³/s (used in planning documents); siltation se actual capacity kam ho sakta hai.
+
+Storage note: There is no major upstream reservoir directly regulating Barak flows at Silchar; flood peaks are mainly due to monsoon runoff from hills and tributaries (Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal, etc.).
+
+6) Upstream Water Release and Runoff from Hills
+Barak Basin: Covers parts of Assam, Manipur, Mizoram, Tripura, Meghalaya, Nagaland.
+
+Upstream areas: Heavy rainfall in Manipur, Mizoram, Meghalaya ne Silchar par pressure badhaya.
+
+Tributaries: Jiri, Chiri, Madhura, Jatinga, Sonai, Katakhal se rapid runoff hua, jisse Barak water level tezi se badha.
+
+No major upstream reservoir: Koi major upstream reservoir nahi hai jo flows regulate kare; isliye flood peaks directly Silchar tak pohochte hain.
+
+7) Urban Planning Issues and Encroachments
+Unplanned construction: Silchar town me unplanned construction, encroachments on drains, aur weak embankments ne flood vulnerability badhayi.
+
+Low‑lying areas: Berenga–Betukandi zone naturally flood-prone hain; inme construction density badhne se impact intensify hua.
+
+Market areas: Ambicapatty, N.S. Avenue, Gunjung me dense construction aur high footfall ne flood risk badhaya.
+
+Drain encroachments: Internal drains aur nullahs par encroachments se water flow block hua; street‑level flooding intensify hua.
+
+8) Compounding Effect of Thunderstorms
+June–August 2023: Thunderstorms ne flood situation ko worsen kiya; intense short-duration rainfall ne urban waterlogging badhaya.
+
+Temporary flood shelters: Thunderstorms se damage hue; affected families ko additional stress hua.
+
+Power outages: Low‑lying wards me power outages aur communication disruptions ne rescue aur relief coordination ko complicate kiya.
+
+9) Terrain and Landscape Factors
+Alluvial flat plain: Silchar lies on an alluvial flat plain with swamps, streams, and small isolated hills (“Tilla”).
+
+Swamps and streams: Swamps aur streams ne water retention badhaya; drainage slow hua.
+
+Small hills (“Tilla”): Localized convergence zones create hote hain jo thunderstorm cells intensify kar sakte hain.
+
+10) Seismic Zone V Vulnerability (Compounding Risk)
+Seismic Zone V: Silchar falls under Seismic Zone V (very high earthquake risk), which makes flood‑damaged structures more vulnerable if any seismic event occurs during/after floods.
+
+Flood‑damaged structures: Repeated flooding ne kutcha houses, embankments, aur infrastructure ko weaken kiya; seismic event se additional damage ka risk.
 
 
 *   THUNDERSTROM *
