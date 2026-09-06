@@ -330,7 +330,7 @@ function AiAssistantPanel({ isOpen, onClose }) {
                     : 'bg-slate-100 text-slate-800'
               }`}
             >
-              <p>{message.text}</p>
+              <p className="whitespace-pre-wrap">{message.text}</p>
               {message.meta && (
                 <p className="mt-1 text-xs text-slate-400">{message.meta}</p>
               )}

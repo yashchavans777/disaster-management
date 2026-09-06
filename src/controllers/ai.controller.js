@@ -263,4 +263,39 @@ const graphRoute = async (req, res) => {
   }
 };
 
-module.exports = { predictRisk, ragQuery, graphRoute };
+/**
+ * POST /api/ai/sync-data-to-db
+ * Calls FastAPI /sync-data-to-db to parse slichar.txt and sync incidents into MongoDB.
+ */
+const syncDataToDb = async (req, res) => {
+  try {
+    const fastapiRes = await fetch(`${FASTAPI_URL}/sync-data-to-db`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (fastapiRes.ok) {
+      const data = await fastapiRes.json();
+      return apiResponse.success(res, 200, 'Data synced to database', data);
+    }
+
+    const errData = await fastapiRes.json().catch(() => ({}));
+    return apiResponse.error(
+      res,
+      fastapiRes.status,
+      errData.detail || 'Failed to sync data'
+    );
+  } catch (error) {
+    logger.error(`syncDataToDb error: ${error.message}`);
+    return apiResponse.error(
+      res,
+      502,
+      'FastAPI sync service unavailable',
+      error.message
+    );
+  }
+};
+
+module.exports = { predictRisk, ragQuery, graphRoute, syncDataToDb };
+

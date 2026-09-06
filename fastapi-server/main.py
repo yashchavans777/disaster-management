@@ -13,6 +13,8 @@ All endpoints degrade gracefully if upstream services (Open-Meteo, Node.js API) 
 """
 
 import asyncio
+import datetime
+import json
 import math
 import os
 import time
@@ -22,10 +24,17 @@ from typing import Any, Optional
 import google.generativeai as genai
 import httpx
 import numpy as np
+import pymongo
+try:
+    import certifi
+    HAS_CERTIFI = True
+except ImportError:
+    HAS_CERTIFI = False
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
 
 # Load .env from the parent directory
 __dirname = os.path.dirname(os.path.abspath(__file__))
@@ -187,9 +196,146 @@ def _compute_risk_score(weather: dict, hist_bias: float = 0.0) -> tuple[float, s
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 SILCHAR_HISTORY_FILE = os.path.join(DATA_DIR, "silchar_history.txt")
 
+NER_LOC_COORDS: dict[str, tuple[float, float]] = {
+    "jatinga": (25.1320, 93.0310),
+    "lampur": (25.1320, 93.0310),
+    "dima hasao": (25.1320, 93.0310),
+    "lumding": (25.7500, 93.1700),
+    "badarpur": (24.9000, 92.6000),
+    "dihaku": (25.2910, 93.1820),
+    "mupa": (25.2910, 93.1820),
+    "jamira": (24.3120, 92.6510),
+    "bairabi": (24.1870, 92.5360),
+    "katakhal": (24.7800, 92.7300),
+    "berenga": (24.8120, 92.7910),
+    "betukandi": (24.8120, 92.7910),
+    "silchar": (24.8333, 92.7789),
+    "guwahati": (26.1445, 91.7362),
+    "shillong": (25.5788, 91.8933),
+    "imphal": (24.8170, 93.9368),
+    "aizawl": (23.7271, 92.7176),
+    "agartala": (23.8315, 91.2868),
+    "kohima": (25.6751, 94.1086),
+    "itanagar": (27.0844, 93.6053),
+    "dibrugarh": (27.4728, 94.9120),
+    "gangtok": (27.3389, 88.6065),
+}
+
+
+def _resolve_loc_coords(loc_text: str) -> tuple[float, float]:
+    lt = str(loc_text).lower()
+    for key, coords in NER_LOC_COORDS.items():
+        if key in lt:
+            return coords
+    return (24.8333, 92.7789)
+
+
+def _get_mongo_db():
+    uri = (os.getenv("MONGODB_URI") or "").strip()
+    if not uri:
+        return None
+    client_kwargs = {
+        "serverSelectionTimeoutMS": 15000,
+        "connectTimeoutMS": 15000,
+    }
+    if HAS_CERTIFI:
+        try:
+            client_kwargs["tlsCAFile"] = certifi.where()
+        except Exception as e:
+            print(f"Warning: Failed to set certifi tlsCAFile: {e}")
+    try:
+        client = pymongo.MongoClient(uri, **client_kwargs)
+        try:
+            return client.get_database()
+        except Exception:
+            return client["disaster-management"]
+    except Exception as exc:
+        print(f"Error connecting to MongoDB: {exc}")
+        return None
+
+
+def _read_slichar_file() -> tuple[str, str]:
+    """Locates and reads the slichar.txt file. Returns (raw_content, resolved_path)."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(base_dir)
+    possible_paths = [
+        os.path.join(base_dir, "slichar.txt"),
+        os.path.join(base_dir, "data", "slichar.txt"),
+        os.path.join(root_dir, "slichar.txt"),
+        os.path.join(base_dir, "data", "silchar_history.txt"),
+        os.path.join(base_dir, "silchar.txt"),
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        return content, p
+            except Exception as e:
+                print(f"Error reading {p}: {e}")
+    return "", ""
+
+
+def _fallback_parse_slichar(text: str) -> list[dict]:
+    """Deterministic fallback parser for slichar.txt incidents."""
+    incidents = []
+    lines = [line.strip().lstrip("-•* ") for line in text.split("\n") if line.strip()]
+    for line in lines:
+        if "historical disaster data" in line.lower():
+            continue
+        inc_type = "other"
+        l_lower = line.lower()
+        if "landslide" in l_lower:
+            inc_type = "landslide"
+        elif "flood" in l_lower or "embankment" in l_lower or "breach" in l_lower:
+            inc_type = "flood"
+        elif "erosion" in l_lower or "washout" in l_lower or "track" in l_lower:
+            inc_type = "roadblock"
+        elif "drainage" in l_lower or "blockage" in l_lower:
+            inc_type = "flooding"
+
+        severity = "high"
+        if "critical" in l_lower or "cut off" in l_lower or "epicenter" in l_lower:
+            severity = "critical"
+        elif "moderate" in l_lower or "minor" in l_lower:
+            severity = "medium"
+
+        if ":" in line:
+            parts = line.split(":", 1)
+            date_str = parts[0].strip()
+            desc = parts[1].strip()
+        else:
+            date_str = "Recent"
+            desc = line
+
+        loc = "Silchar, Assam"
+        if "jatinga" in l_lower or "lampur" in l_lower or "dima hasao" in l_lower:
+            loc = "Jatinga Lampur Area, Dima Hasao"
+        elif "dihaku" in l_lower or "mupa" in l_lower:
+            loc = "Dihaku and Mupa Stations, KM 51/2-3"
+        elif "jamira" in l_lower or "bairabi" in l_lower:
+            loc = "Jamira (Assam) to Bairabi (Mizoram) Section"
+        elif "berenga" in l_lower or "betukandi" in l_lower:
+            loc = "Berenga Betukandi Area, Silchar"
+        elif "highway" in l_lower or "flyover" in l_lower:
+            loc = "National Highway 4-lane Corridor, Silchar"
+
+        incidents.append({
+            "type": inc_type,
+            "location": loc,
+            "severity": severity,
+            "date": date_str,
+            "description": desc,
+        })
+    return incidents
+
 
 def _load_silchar_history() -> str:
     """Reads the hyper-local historical disaster knowledge base for Silchar and NER."""
+    content, _ = _read_slichar_file()
+    if content:
+        return content
     if os.path.exists(SILCHAR_HISTORY_FILE):
         try:
             with open(SILCHAR_HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -406,14 +552,20 @@ async def rag_query(req: RagQueryRequest):
     # Read context from data/silchar_history.txt
     silchar_history = _load_silchar_history()
 
-    # Construct highly flexible conversational prompt:
     prompt = (
-        "You are 'Logi-Assistant', a helpful and intelligent AI companion for a Logistics & Disaster Management platform in the North East Region (NER).\n\n"
-        "CRITICAL INSTRUCTIONS:\n"
-        "1. You must answer EVERY question the user asks intelligently and conversationally.\n"
-        f"2. If the user's question is about historical floods or landslides in Silchar, incorporate this specific context: {silchar_history}\n"
-        "3. If the user asks about ANYTHING ELSE (e.g., weather, general knowledge, why this platform is useful, greetings, or random questions), use your vast general knowledge to provide a highly relevant, helpful, and friendly answer.\n"
-        "4. Never say you cannot answer. Always respond naturally to whatever the user says.\n\n"
+        "You are 'Logi-Assistant', a highly advanced, professional, and empathetic Logistics & Disaster Management AI for the North East Region (NER).\n\n"
+        "CRITICAL INSTRUCTIONS FOR YOUR TONE AND FORMATTING:\n"
+        "- Always use Markdown to format your response beautifully.\n"
+        "- Use bold text for key terms, locations, and important metrics.\n"
+        "- Use bullet points for listing facts, precautions, or affected areas.\n"
+        "- Use appropriate emojis (e.g., 🌧️, 🚧, 🚚, ⚠️) to make the text scannable and engaging.\n"
+        "- Be empathetic yet highly operational. Talk like a senior disaster management expert.\n\n"
+        "KNOWLEDGE BASE:\n"
+        f"Use this official historical data to ground your answers: {silchar_history}\n\n"
+        "ROUTING INSTRUCTIONS:\n"
+        "- If the user asks about floods, landslides, or logistics in NER, use the knowledge base.\n"
+        "- If the user asks general questions, answer smartly using your vast general knowledge.\n"
+        "- Never break character.\n\n"
         f"User Question: {user_query}\n"
         "Answer:"
     )
@@ -476,6 +628,154 @@ async def rag_query(req: RagQueryRequest):
         "knowledge_base_loaded": bool(silchar_history),
         "source": llm_provider,
         "retrieved_at": time.time(),
+    }
+
+
+@app.post("/sync-data-to-db")
+async def sync_data_to_db():
+    """
+    Reads slichar.txt, uses Google Gemini (genai.GenerativeModel) to parse unstructured incident logs
+    into a strict JSON array of incidents (fields: type, location, severity, date, description),
+    and synchronises them into MongoDB 'incidents' collection (and 'incidentreports' collection
+    so the frontend dashboard incident counter updates automatically).
+    """
+    raw_text, file_path = _read_slichar_file()
+    if not raw_text:
+        raise HTTPException(
+            status_code=404,
+            detail="slichar.txt file could not be found or is empty."
+        )
+
+    parsed_incidents: list[dict] = []
+    llm_parser_used = None
+
+    parse_prompt = (
+        "You are an expert disaster data extraction engine.\n"
+        "Parse the following unstructured disaster incident records and convert them into a strict JSON array of objects.\n"
+        "Each incident object in the array MUST contain EXACTLY these fields:\n"
+        "- type: string, must be one of ['landslide', 'flood', 'flooding', 'roadblock', 'other']\n"
+        "- location: string, the specific location, area, corridor, or station mentioned\n"
+        "- severity: string, one of ['low', 'medium', 'high', 'critical']\n"
+        "- date: string, the date, month, or year of the incident\n"
+        "- description: string, clear summary of what occurred\n\n"
+        "CRITICAL: Return ONLY the raw JSON array. Do not wrap in markdown code blocks, backticks, or add any commentary.\n\n"
+        f"UNSTRUCTURED TEXT:\n{raw_text}"
+    )
+
+    gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if gemini_key:
+        try:
+            genai.configure(api_key=gemini_key)
+            for model_name in ["gemini-3.6-flash", "gemini-flash-latest", "gemini-1.5-flash"]:
+                try:
+                    m = genai.GenerativeModel(model_name)
+                    res = await m.generate_content_async(parse_prompt)
+                    if res and hasattr(res, "text") and res.text:
+                        text_res = res.text.strip()
+                        if text_res.startswith("```"):
+                            lines = text_res.split("\n")
+                            if lines[0].startswith("```"):
+                                lines = lines[1:]
+                            if lines and lines[-1].startswith("```"):
+                                lines = lines[:-1]
+                            text_res = "\n".join(lines).strip()
+                        data = json.loads(text_res)
+                        if isinstance(data, list) and len(data) > 0:
+                            parsed_incidents = data
+                            llm_parser_used = f"google-gemini ({model_name})"
+                            break
+                except Exception as m_err:
+                    print(f"Gemini parsing attempt ({model_name}) error: {m_err}")
+                    continue
+        except Exception as exc:
+            print(f"Gemini configuration error during sync: {exc}")
+
+    if not parsed_incidents:
+        parsed_incidents = _fallback_parse_slichar(raw_text)
+        llm_parser_used = "deterministic-rule-parser"
+
+    # Connect to MongoDB
+    db = _get_mongo_db()
+    if db is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to connect to MongoDB. Please check MONGODB_URI."
+        )
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    synced_count = 0
+
+    valid_types = {"landslide", "flood", "flooding", "roadblock", "other"}
+    valid_severities = {"low", "medium", "high", "critical"}
+
+    for inc in parsed_incidents:
+        raw_type = str(inc.get("type", "other")).lower().strip()
+        itype = raw_type if raw_type in valid_types else "other"
+
+        raw_sev = str(inc.get("severity", "medium")).lower().strip()
+        isev = raw_sev if raw_sev in valid_severities else "medium"
+
+        raw_loc = inc.get("location", "Silchar, Assam")
+        loc_str = raw_loc if isinstance(raw_loc, str) else str(raw_loc.get("address", "Silchar, Assam"))
+        lat, lng = _resolve_loc_coords(loc_str)
+
+        description = str(inc.get("description", "")).strip()
+        date_str = str(inc.get("date", "")).strip()
+
+        # Document for 'incidents' collection (Phase 2 primary requirement)
+        incident_doc = {
+            "type": itype,
+            "location": loc_str,
+            "severity": isev,
+            "date": date_str,
+            "description": description,
+            "status": "active",
+            "updatedAt": now,
+        }
+
+        # Document for 'incidentreports' collection (Mongoose model queried by /api/dashboard/stats and /api/incidents)
+        report_doc = {
+            "type": itype,
+            "title": f"{itype.capitalize()} at {loc_str}",
+            "description": description,
+            "severity": isev,
+            "location": {
+                "lat": lat,
+                "lng": lng,
+                "address": loc_str,
+            },
+            "status": "active",
+            "updatedAt": now,
+        }
+
+        filter_q = {"description": description} if description else {"location": loc_str, "date": date_str}
+
+        # 1. Update/insert in 'incidents' collection
+        db["incidents"].update_one(
+            filter_q,
+            {"$set": incident_doc, "$setOnInsert": {"createdAt": now}},
+            upsert=True
+        )
+
+        # 2. Update/insert in 'incidentreports' collection
+        db["incidentreports"].update_one(
+            filter_q,
+            {"$set": report_doc, "$setOnInsert": {"createdAt": now, "reportedBy": None}},
+            upsert=True
+        )
+
+        synced_count += 1
+
+    return {
+        "status": "success",
+        "message": f"Successfully parsed and synced {synced_count} incidents to MongoDB.",
+        "incidents_added": synced_count,
+        "count": synced_count,
+        "collection": "incidents",
+        "source_file": os.path.basename(file_path),
+        "parser": llm_parser_used,
+        "incidents": parsed_incidents,
+        "timestamp": time.time(),
     }
 
 
