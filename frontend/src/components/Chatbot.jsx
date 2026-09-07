@@ -16,47 +16,124 @@ export default function Chatbot({ isOpen = true, onClose }) {
   const [isQuerying, setIsQuerying] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Only scroll down on new messages — NO auto-trigger on component mount
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    const question = query.trim();
-    if (!question) return;
+  // Explicit user-triggered send function with guard clause and True Streaming (SSE / Chunks)
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
 
-    setMessages((m) => [...m, { role: 'user', text: question }]);
+    const userInput = query;
+    // Guard clause to prevent sending empty requests to the server
+    if (!userInput.trim()) return;
+
+    const question = userInput.trim();
     setQuery('');
     setIsQuerying(true);
 
+    // 1. Append user's message, and initialize an empty assistant bubble for live streaming
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: question },
+      {
+        role: 'assistant',
+        text: '',
+        isStreaming: true,
+        meta: '⚡ Groq (Llama-3-8b Streaming)',
+      },
+    ]);
+
     try {
-      const response = await apiClient.post('/ai/rag-query', { question });
-      const answer =
-        response.data?.data?.answer || 'No answer returned from AI service.';
-      const source = response.data?.data?.source || '';
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: answer,
-          meta: source.includes('fallback')
-            ? '⚡ Local RAG fallback'
-            : '🤖 FastAPI RAG (Gemini)',
-        },
-      ]);
+      // Direct stream fetch to FastAPI with fallback to Node.js /api/ai/rag-query
+      let response;
+      const FASTAPI_URL = import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000';
+
+      try {
+        response = await fetch(`${FASTAPI_URL}/rag-query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+      } catch (directErr) {
+        // Fallback to Node.js proxy endpoint which also pipes the stream
+        response = await fetch('/api/ai/rag-query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+      }
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Service returned HTTP status ${response.status}`);
+      }
+
+      // 2. Consume streaming chunks via JavaScript Streams API reader and TextDecoder
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let streamedAnswer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunkText = decoder.decode(value, { stream: true });
+        streamedAnswer += chunkText;
+
+        // Continuously append new tokens to the assistant message in real-time
+        setMessages((prev) => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
+            updated[lastIdx] = {
+              ...updated[lastIdx],
+              text: streamedAnswer,
+              isStreaming: true,
+            };
+          }
+          return updated;
+        });
+      }
+
+      // Mark streaming complete
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            isStreaming: false,
+          };
+        }
+        return updated;
+      });
     } catch (error) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: `Error: ${getApiErrorMessage(error, 'RAG query failed. Please check the AI service.')}`,
-          isError: true,
-        },
-      ]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            text: updated[lastIdx].text || `⚠️ Error: ${error.message || 'Stream failed to connect.'}`,
+            isError: true,
+            isStreaming: false,
+          };
+        } else {
+          updated.push({
+            role: 'assistant',
+            text: `⚠️ Error: ${error.message}`,
+            isError: true,
+          });
+        }
+        return updated;
+      });
     } finally {
       setIsQuerying(false);
     }
   };
+
+  const handleAsk = handleSendMessage;
 
   if (!isOpen) return null;
 
@@ -227,7 +304,7 @@ export default function Chatbot({ isOpen = true, onClose }) {
       </div>
 
       {/* Input Form Footer */}
-      <form onSubmit={handleAsk} className={footerClasses}>
+      <form onSubmit={handleSendMessage} className={footerClasses}>
         <div
           className={`flex gap-2.5 ${
             isFullscreen ? 'mx-auto max-w-4xl' : 'w-full'

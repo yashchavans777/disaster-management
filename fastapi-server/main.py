@@ -1,16 +1,4 @@
-"""
-Smart Logistics Platform — FastAPI AI Microservice
-===================================================
-Provides five AI/data endpoints for the SIH26002 prototype:
-
-  POST /predict-risk      — Deep Learning sigmoid risk predictor
-  POST /rag-query         — RAG-powered admin assistant (retrieves incidents, generates answer)
-  POST /graph-route       — A* pathfinding over the NER city graph
-  POST /agentic-loop      — Full autonomous pipeline: incident → DL → route → broadcast payload
-  GET  /api/weather/silchar — Live weather + 2-day forecast for Silchar, Assam (Open-Meteo, no key)
-
-All endpoints degrade gracefully if upstream services (Open-Meteo, Node.js API) are unavailable.
-"""
+ 
 
 import asyncio
 import datetime
@@ -21,7 +9,13 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-import google.generativeai as genai
+try:
+    from groq import Groq
+    HAS_GROQ = True
+except ImportError:
+    HAS_GROQ = False
+    Groq = None
+
 import httpx
 import numpy as np
 import pymongo
@@ -33,6 +27,7 @@ except ImportError:
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 
@@ -40,12 +35,15 @@ from pydantic import BaseModel, Field
 __dirname = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(os.path.dirname(__dirname), '.env'))
 load_dotenv(os.path.join(__dirname, '.env'))
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
+
+# Groq client initialization
+GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
+groq_client = None
+if HAS_GROQ and GROQ_API_KEY:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
+        groq_client = Groq(api_key=GROQ_API_KEY)
     except Exception as _e:
-        print(f"Warning: Failed to configure Google Generative AI SDK: {_e}")
+        print(f"Warning: Failed to initialize Groq client: {_e}")
 
 NODE_API_URL = os.getenv("NODE_API_URL", "http://localhost:5055/api")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -59,16 +57,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5055"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── NER GRAPH (mirrors gis.service.js) ────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
+ 
 
 NER_GRAPH: dict[str, dict] = {
     "guwahati":  {"coord": [26.1445, 91.7362], "edges": {"shillong": 1.0, "silchar": 1.2, "dibrugarh": 1.0}},
@@ -435,53 +430,99 @@ async def predict_risk(req: PredictRiskRequest):
 @app.post("/rag-query")
 async def rag_query(req: RagQueryRequest):
     """
-    RAG-powered admin assistant powered by Google Gemini SDK.
-    Reads data/silchar_history.txt as context, queries Google Gemini (gemini-1.5-flash),
-    and falls back gracefully to deterministic local synthesis if GEMINI_API_KEY is unset.
+    RAG-powered logistics & disaster management assistant with True Streaming (SSE / Chunked).
+    Reads context from slichar.txt, queries Groq (llama3-8b-8192) with stream=True,
+    and returns token-by-token chunks using FastAPI's StreamingResponse.
     """
     user_query = req.question.strip()
     if not user_query or len(user_query) < 3:
         raise HTTPException(status_code=400, detail="question must be at least 3 characters")
 
-    # Read context from data/silchar_history.txt
+    # Read context from slichar.txt / silchar_history.txt
     file_content = _load_silchar_history()
 
-    prompt = f"""You are 'Logi-Assistant', a highly intelligent Disaster Management and Logistics AI for the North East Region.
+    system_prompt = (
+        "You are 'Logi-Assistant', a highly advanced, professional, and empathetic Logistics & Disaster Management AI "
+        "for the North East Region (NER).\n\n"
+        f"LOCAL KNOWLEDGE BASE (Your primary source of truth):\n{file_content}\n\n"
+        "CRITICAL INSTRUCTIONS FOR YOUR BEHAVIOR:\n"
+        "1. Act as the intelligent bridge between the user and the regional disaster data.\n"
+        "2. ANALYZE AND LEARN: Read the Local Knowledge Base deeply. Look for specific metrics, patterns, limits "
+        "(e.g., 85% rainfall thresholds, 19.83m river danger levels, specific blocked highways like NH-6, landslides at Jatinga Lampur, breaches at Berenga Betukandi).\n"
+        "3. BLEND KNOWLEDGE: Extract exact facts from the Local Knowledge Base, and combine those facts with your general "
+        "logistics knowledge to give a rich, complete, and conversational answer.\n"
+        "4. CONVERSATIONAL TONE: Never say 'According to the file' or 'The text says'. Speak like an experienced emergency operations controller.\n"
+        "5. GENERAL QUERIES: If the user says 'Hi' or asks general logistics questions, answer naturally and professionally.\n"
+        "6. NO CODE: Never output raw code blocks or JSON unless specifically requested. Use beautiful Markdown formatting with bullet points and bold highlights."
+    )
 
-LOCAL KNOWLEDGE BASE (Your primary source of truth):
-{file_content}
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
 
-CRITICAL INSTRUCTIONS FOR YOUR BEHAVIOR:
-1. Act as the intelligent bridge between the user and the data.
-2. ANALYZE AND LEARN: Read the Local Knowledge Base deeply. Look for specific metrics, patterns, limits (e.g., 85% rainfall, 19.83m danger levels, specific blocked highways).
-3. BLEND KNOWLEDGE: When answering, FIRST extract exact facts from the Local Knowledge Base. THEN, combine those facts with your general Gemini knowledge to give a rich, complete, and conversational answer.
-4. CONVERSATIONAL TONE: Never say "According to the file" or "The text says". Talk like a human expert. (e.g., "At 85% excess rainfall, Silchar enters a red alert phase. Generally, in such conditions, it's advised to...")
-5. GENERAL QUERIES: If the user just says "Hi" or asks unrelated questions, answer naturally using your general knowledge.
-6. NO CODE: Never output code blocks, raw JSON, or overly complex formatting unless specifically requested. Keep it readable and helpful.
+    async def token_generator():
+        if not groq_key:
+            yield "⚠️ **Groq API Key Missing:** Please add `GROQ_API_KEY=your_key_here` to your `.env` file to enable ultra-fast Llama-3 streaming."
+            return
 
-User Question: {user_query}
-Logi-Assistant's Answer:"""
+        try:
+            if HAS_GROQ:
+                client = Groq(api_key=groq_key)
+                # True token streaming with Groq SDK
+                stream = client.chat.completions.create(
+                    model="llama3-8b-8192",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_query},
+                    ],
+                    temperature=0.3,
+                    max_tokens=1024,
+                    stream=True,
+                )
+                for chunk in stream:
+                    content = chunk.choices[0].delta.content or ""
+                    if content:
+                        yield content
+            else:
+                # Direct HTTP streaming fallback via httpx
+                async with httpx.AsyncClient(timeout=60.0) as http_client:
+                    async with http_client.stream(
+                        "POST",
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {groq_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": "llama3-8b-8192",
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_query},
+                            ],
+                            "temperature": 0.3,
+                            "max_tokens": 1024,
+                            "stream": True,
+                        },
+                    ) as resp:
+                        async for line in resp.aiter_lines():
+                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                                try:
+                                    payload = json.loads(line[6:])
+                                    delta = payload.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                    if delta:
+                                        yield delta
+                                except Exception:
+                                    pass
+        except Exception as e:
+            yield f"\n\n⚠️ **Groq Streaming Error:** {str(e)}"
 
-    gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if gemini_key:
-        genai.configure(api_key=gemini_key)
-
-    try:
-        # API ne khud gemini-3.6-flash use karne bola hai
-        print("✅ Using API-recommended model: gemini-3.6-flash")
-        model = genai.GenerativeModel("gemini-3.6-flash")
-        
-        # Answer generate kar rahe hain
-        response = await model.generate_content_async(prompt)
-        return {"answer": response.text, "source": "🤖 Gemini AI"}
-        
-    except Exception as e:
-        error_msg = str(e)
-        print(f"\n❌ GEMINI API ERROR: {error_msg}\n")
-        return {
-            "answer": f"⚠️ **Gemini API Error:** {error_msg}",
-            "source": "System Error"
-        }
+    return StreamingResponse(
+        token_generator(),
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.post("/sync-data-to-db")
