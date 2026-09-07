@@ -5,6 +5,7 @@ import datetime
 import json
 import math
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -336,10 +337,8 @@ def _load_silchar_history() -> str:
             with open(SILCHAR_HISTORY_FILE, "r", encoding="utf-8") as f:
                 return f.read().strip()
         except Exception as e:
-            print(f"Error reading silchar_history.txt: {e}")
+            pass
     return ""
-
-
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -354,7 +353,8 @@ class PredictRiskRequest(BaseModel):
 
 
 class RagQueryRequest(BaseModel):
-    question: str
+    question: Optional[str] = None
+    query: Optional[str] = None
     context: Optional[str] = None
     incident_count: int = 0
 
@@ -427,19 +427,48 @@ async def predict_risk(req: PredictRiskRequest):
     }
 
 
+def _retrieve_top_chunks(full_text: str, query: str, top_k: int = 3, max_chars: int = 10000) -> str:
+    """Clamps RAG retrieval to top 2-3 most relevant chunks and ensures <= max_chars."""
+    if not full_text:
+        return ""
+    if len(full_text) <= max_chars:
+        return full_text
+
+    # Split into sections by date or double newline
+    chunks = [c.strip() for c in re.split(r'\n(?=Date:|\d{4}-\d{2}-\d{2}|\b[A-Z][a-z]+ \d{1,2}, \d{4})|\n\n+', full_text) if c.strip()]
+    if not chunks:
+        return full_text[:max_chars]
+
+    query_words = set(re.findall(r'\w+', query.lower())) - {"the", "a", "an", "is", "in", "at", "to", "for", "of", "and", "or"}
+    scored = []
+    for idx, c in enumerate(chunks):
+        c_words = set(re.findall(r'\w+', c.lower()))
+        score = len(query_words.intersection(c_words))
+        scored.append((score, idx, c))
+
+    # Sort primarily by keyword matches, secondarily preserving most recent chunks
+    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    top_chunks = [c for _, _, c in scored[:top_k]]
+    combined = "\n\n---\n\n".join(top_chunks)
+    if len(combined) > max_chars:
+        combined = combined[:max_chars] + "\n\n[Context truncated to fit token limits]"
+    return combined
+
+
 @app.post("/rag-query")
 async def rag_query(req: RagQueryRequest):
     """
     RAG-powered logistics & disaster management assistant with True Streaming (SSE / Chunked).
-    Reads context from slichar.txt, queries Groq (llama3-8b-8192) with stream=True,
+    Reads context from slichar.txt, queries Groq with stream=True,
     and returns token-by-token chunks using FastAPI's StreamingResponse.
     """
-    user_query = req.question.strip()
-    if not user_query or len(user_query) < 3:
-        raise HTTPException(status_code=400, detail="question must be at least 3 characters")
+    user_query = (req.question or req.query or "").strip()
+    if not user_query:
+        raise HTTPException(status_code=400, detail="question or query cannot be empty")
 
-    # Read context from slichar.txt / silchar_history.txt
-    file_content = _load_silchar_history()
+    # 1. Inspect & Clamp RAG Document Retrieval (top 2-3 chunks maximum, <= 10000 chars)
+    raw_content = req.context or _load_silchar_history()
+    file_content = _retrieve_top_chunks(raw_content, user_query, top_k=3, max_chars=10000)
 
     system_prompt = (
         "You are 'Logi-Assistant', a highly advanced, professional, and empathetic Logistics & Disaster Management AI "
@@ -456,62 +485,72 @@ async def rag_query(req: RagQueryRequest):
         "6. NO CODE: Never output raw code blocks or JSON unless specifically requested. Use beautiful Markdown formatting with bullet points and bold highlights."
     )
 
+    # 2. Hard Character Clamping on system_prompt (staying under ~3,500 tokens / 14,000 chars)
+    MAX_CONTEXT_CHARS = 14000
+    if len(system_prompt) > MAX_CONTEXT_CHARS:
+        system_prompt = system_prompt[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated to fit token limits]"
+
+    # 3. Add Token Length Debugging
+    estimated_tokens = (len(system_prompt) + len(user_query)) // 4
+    print(f"DEBUG-INPUT-SIZE: ~{estimated_tokens} tokens ({len(system_prompt)} chars)")
+
     groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
 
     async def token_generator():
+        print("DEBUG: Generator started")
         if not groq_key:
-            yield "⚠️ **Groq API Key Missing:** Please add `GROQ_API_KEY=your_key_here` to your `.env` file to enable ultra-fast Llama-3 streaming."
+            print("DEBUG-TOKEN: [MISSING GROQ_API_KEY]")
+            yield "⚠️ **Groq API Key Missing:** Please add `GROQ_API_KEY=your_key_here` to your `.env` file to enable ultra-fast streaming."
             return
 
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json",
+        }
+        # 4. Ensure Output Limit (800 tokens max, well below 1000 limit)
+        payload = {
+            "model": "qwen/qwen3.8-27b",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_query},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 800,
+            "stream": True,
+        }
+
         try:
-            if HAS_GROQ:
-                client = Groq(api_key=groq_key)
-                # True token streaming with Groq SDK
-                stream = client.chat.completions.create(
-                    model="llama3-8b-8192",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_query},
-                    ],
-                    temperature=0.3,
-                    max_tokens=1024,
-                    stream=True,
-                )
-                for chunk in stream:
-                    content = chunk.choices[0].delta.content or ""
-                    if content:
-                        yield content
-            else:
-                # Direct HTTP streaming fallback via httpx
-                async with httpx.AsyncClient(timeout=60.0) as http_client:
-                    async with http_client.stream(
-                        "POST",
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {groq_key}",
-                            "Content-Type": "application/json",
-                        },
-                        json={
-                            "model": "llama3-8b-8192",
-                            "messages": [
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_query},
-                            ],
-                            "temperature": 0.3,
-                            "max_tokens": 1024,
-                            "stream": True,
-                        },
-                    ) as resp:
-                        async for line in resp.aiter_lines():
-                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
-                                try:
-                                    payload = json.loads(line[6:])
-                                    delta = payload.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                                    if delta:
-                                        yield delta
-                                except Exception:
-                                    pass
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                ) as resp:
+                    if resp.status_code != 200:
+                        error_bytes = await resp.aread()
+                        error_text = error_bytes.decode("utf-8", errors="replace")
+                        print(f"DEBUG-GROQ-ERROR: {error_text}")
+                        yield f"⚠️ **Groq API Error ({resp.status_code}):** {error_text}"
+                        return
+
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data: "):
+                            raw_data = line[6:].strip()
+                            if raw_data == "[DONE]":
+                                break
+                            try:
+                                chunk_json = json.loads(raw_data)
+                                delta = chunk_json.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                if delta:
+                                    print(f"DEBUG-TOKEN: '{delta}'")
+                                    yield delta
+                            except Exception as parse_err:
+                                pass
         except Exception as e:
+            print(f"DEBUG-FATAL-CRASH: {str(e)}")
             yield f"\n\n⚠️ **Groq Streaming Error:** {str(e)}"
 
     return StreamingResponse(

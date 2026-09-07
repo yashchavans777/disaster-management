@@ -180,8 +180,21 @@ function MapViewer({
   }, [liveVehicles]);
 
   useEffect(() => {
+    // Initialize socket with polling fallback and capped reconnection
     const socket = io(SOCKET_SERVER_URL, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 3000,
+      timeout: 4000,
+    });
+
+    // Gracefully handle offline server without throwing fatal red console errors
+    socket.on('connect_error', (error) => {
+      // Degrade gracefully when backend on port 5055 is offline
+    });
+
+    socket.on('connect', () => {
+      // Connected to live vehicle telemetry feed
     });
 
     socket.on('vehicle_moved', (locationUpdate) => {
@@ -222,6 +235,8 @@ function MapViewer({
     });
 
     return () => {
+      socket.off('connect_error');
+      socket.off('connect');
       socket.off('vehicle_moved');
       socket.disconnect();
       animationsRef.current.forEach((cancelAnimation) => cancelAnimation());
