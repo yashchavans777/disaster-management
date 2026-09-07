@@ -122,36 +122,29 @@ const ragQuery = async (req, res) => {
           context,
           incident_count: recentIncidents.length,
         }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(60000),
       });
 
-      if (fastapiRes.ok) {
-        const data = await fastapiRes.json();
-        return apiResponse.success(
-          res,
-          200,
-          'RAG query answered by FastAPI',
-          data
-        );
-      }
-    } catch (_) {
-      logger.warn('FastAPI RAG unavailable — using local summariser');
+      const data = await fastapiRes.json();
+      return apiResponse.success(
+        res,
+        fastapiRes.ok ? 200 : fastapiRes.status,
+        'RAG query response',
+        data
+      );
+    } catch (fetchErr) {
+      logger.error(`FastAPI RAG error: ${fetchErr.message}`);
+      return apiResponse.success(res, 200, 'RAG query service error', {
+        answer: `⚠️ **Connection Error:** Could not reach FastAPI AI service at ${FASTAPI_URL} (${fetchErr.message}). Ensure the FastAPI server is running on port 8000.`,
+        source: 'System Error',
+      });
     }
-
-    // ── Local RAG fallback — rule-based answer generation ───────────────────
-    const answer = buildLocalRagAnswer(question.trim(), recentIncidents);
-
-    return apiResponse.success(res, 200, 'RAG query answered locally', {
-      question: question.trim(),
-      answer,
-      context_incidents: recentIncidents.length,
-      source: 'local-rag-fallback',
-    });
   } catch (error) {
     logger.error(`ragQuery error: ${error.message}`);
     return apiResponse.error(res, 500, 'RAG query failed', error.message);
   }
 };
+
 
 /**
  * Local rule-based RAG answer builder.
@@ -263,4 +256,39 @@ const graphRoute = async (req, res) => {
   }
 };
 
-module.exports = { predictRisk, ragQuery, graphRoute };
+/**
+ * POST /api/ai/sync-data-to-db
+ * Calls FastAPI /sync-data-to-db to parse slichar.txt and sync incidents into MongoDB.
+ */
+const syncDataToDb = async (req, res) => {
+  try {
+    const fastapiRes = await fetch(`${FASTAPI_URL}/sync-data-to-db`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (fastapiRes.ok) {
+      const data = await fastapiRes.json();
+      return apiResponse.success(res, 200, 'Data synced to database', data);
+    }
+
+    const errData = await fastapiRes.json().catch(() => ({}));
+    return apiResponse.error(
+      res,
+      fastapiRes.status,
+      errData.detail || 'Failed to sync data'
+    );
+  } catch (error) {
+    logger.error(`syncDataToDb error: ${error.message}`);
+    return apiResponse.error(
+      res,
+      502,
+      'FastAPI sync service unavailable',
+      error.message
+    );
+  }
+};
+
+module.exports = { predictRisk, ragQuery, graphRoute, syncDataToDb };
+

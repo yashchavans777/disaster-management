@@ -20,6 +20,7 @@ import ReportIncidentModal from '../components/ReportIncidentModal';
 import WeatherWidget from '../components/WeatherWidget';
 import RoutePlanner from '../components/RoutePlanner';
 import CityDetailMap from '../components/CityDetailMap';
+import Chatbot from '../components/Chatbot';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
@@ -239,140 +240,8 @@ const buildIncidentPayload = ({ type, description, latitude, longitude }) => ({
 });
 
 // ── AI Assistant Chat Panel ───────────────────────────────────────────────────
-function AiAssistantPanel({ isOpen, onClose }) {
-  const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      text: 'Hello! I can answer questions about recent incidents, route risks, and logistics. Try: "Analyze recent road blockages" or "How many high-severity incidents?"',
-    },
-  ]);
-  const [isQuerying, setIsQuerying] = useState(false);
-  const messagesEndRef = useRef(null);
+const AiAssistantPanel = Chatbot;
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    const question = query.trim();
-    if (!question) return;
-
-    setMessages((m) => [...m, { role: 'user', text: question }]);
-    setQuery('');
-    setIsQuerying(true);
-
-    try {
-      const response = await apiClient.post('/ai/rag-query', { question });
-      const answer =
-        response.data?.data?.answer || 'No answer returned from AI service.';
-      const source = response.data?.data?.source || '';
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: answer,
-          meta: source.includes('fallback')
-            ? '⚡ Local RAG fallback'
-            : '🤖 FastAPI RAG',
-        },
-      ]);
-    } catch (error) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: `Error: ${getApiErrorMessage(error, 'RAG query failed. Please check the AI service.')}`,
-          isError: true,
-        },
-      ]);
-    } finally {
-      setIsQuerying(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-y-0 right-0 z-[900] flex w-full max-w-sm flex-col border-l border-slate-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold text-white">
-            🤖 AI Operations Assistant
-          </h2>
-          <p className="text-xs text-blue-100">
-            RAG-powered — asks about real incident data
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full p-1.5 text-blue-100 transition hover:bg-white/20"
-          aria-label="Close AI assistant"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {messages.map((message, i) => (
-          <div
-            key={i}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                message.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : message.isError
-                    ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
-                    : 'bg-slate-100 text-slate-800'
-              }`}
-            >
-              <p>{message.text}</p>
-              {message.meta && (
-                <p className="mt-1 text-xs text-slate-400">{message.meta}</p>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {isQuerying && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-500">
-              <span className="animate-pulse">Thinking…</span>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <form
-        onSubmit={handleAsk}
-        className="border-t border-slate-200 px-3 py-3"
-      >
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask about incidents, risks, routes…"
-            disabled={isQuerying}
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            disabled={isQuerying || !query.trim()}
-            className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-          >
-            Ask
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
 
 // ── Analytics Charts Section ──────────────────────────────────────────────────
 function AnalyticsSection({ shipments }) {
