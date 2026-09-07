@@ -1,0 +1,121 @@
+DISTRICT DISASTER & SMART LOGISTICS PROFILE: AIZAWL CITY, MIZORAM
+
+1. GEOGRAPHIC & HAZARD PROFILE
+
+* Location & Topography:
+  - Altitude: ~1,100 meters above sea level.
+  - Terrain: Built along a narrow north-south mountain ridge.
+  - Urban Flooding Risk: Minimal on ridge tops. Primary hazard is slope instability and flash flooding in lower valley reaches.
+
+* River & Water Body Dynamics:
+  - West Boundary: Tlawng River (Dhaleswari).
+  - East Boundary: Tuirial River.
+  - Danger Level (DL): ~80 meters above mean sea level in lower reaches (Sairang area).
+  - River Impact: Rapid runoff causes surge levels in Sairang and Lengpui valleys, washing away water pumping infrastructure rather than flooding the ridge-top city.
+
+* Slope & Embankment Limits:
+  - No traditional river embankments exist on the ridge.
+  - Primary structural threats come from steep cut-slopes, unreinforced retaining structures, and hillside stone quarries.
+
+* Rainfall Triggers:
+  - Landslide Threshold: Continuous antecedent rainfall combined with daily downpours of 16 mm to 50 mm triggers widespread landslides.
+  - Extreme Rainfall Events: Daily downpours exceeding 100 mm - 150 mm trigger IMD Red Alerts, causing mass slope failures, mudslides, and road washouts.
+
+2. DISASTER TIMELINE & HISTORICAL IMPACT (2022–2026)
+
+* May 2024 (Cyclone Remal):
+  - Heavy rainfall triggered a major stone quarry collapse near Melthum/Hlimen.
+  - Caused 25 fatalities, destroyed homes, and crushed critical transport vehicles.
+
+* June–July 2024 (Mass Monsoonal Landslides):
+  - Widespread slope failures damaged over 50 homes across upper/lower Aizawl.
+  - Interrupted intra-city transport and local goods movement.
+
+* July–August 2025 (Highway Lifeline Crisis):
+  - Severe mudslides along NH-306/NH-6 stranded hundreds of freight trucks at the Assam-Mizoram border.
+  - Caused critical shortages of fuel, rice, and medical supplies in Aizawl.
+
+* Monsoon 2026 (Regional Isolation):
+  - Repeated slope collapses on NH-54 and NH-6 isolated Aizawl from northern supply hubs and southern districts (Lunglei).
+
+3. MOST AFFECTED & HIGH-RISK LOCALITIES
+
+* Quarry & Slope Failure Hotspots:
+  - Melthum
+  - Hlimen
+  - Laipuitlang
+  - Ramhlun North
+  - Bawngkawn
+  - Edenthar
+
+* Sinking Zones & Low-Lying Valley Areas:
+  - Sairang (Tlawng river valley and water pumping station area)
+  - Zemabawk (Entry pass to Aizawl)
+  - Hunthar Veng (Active sliding zone along the main arterial corridor)
+
+4. LOGISTICS CORRIDORS & ROAD BLOCKAGES
+
+* Primary Lifeline Route (NH-306 / NH-6):
+  - Route: Silchar (Assam) -> Kolasib -> Aizawl.
+  - Supply Share: Carries over 85% of Mizoram's daily essential commodities.
+  - Chokepoints: Landslides at Vairengte or Lailapur completely freeze inbound supply chains.
+
+* Secondary / Alternative Routes:
+  - NH-208 / Bairabi Route: Hailakandi (Assam) -> Bairabi -> Mamit -> Aizawl (Activated during NH-306 closures).
+
+* Air Lifeline:
+  - Lengpui Airport (40 km from Aizawl city center).
+  - Used for emergency medical evacuations and high-value emergency cargo.
+
+* Rail Connectivity:
+  - Bairabi Railway Station (Nearest railhead supplying bulk commodities for transshipment to trucks).
+
+5. GOVERNMENT PRECAUTIONS & Local
+* Administrative Nodal Agencies:
+  - Aizawl District Disaster Management Authority (DDMA) operating under the Deputy Commissioner's Office.
+  - National Disaster Response Force (NDRF) & State Disaster Response Force (SDRF).
+
+* Community Relief Network:
+  - Young Mizo Association (YMA) Community Halls in every Veng (locality) act as immediate emergency relief camps and last-mile distribution centers.
+
+* Local Adaptation Practices:
+  - Pre-monsoon slope clearing and drainage maintenance.
+  - Construction of temporary bamboo drainage channels along cut-slopes.
+  - Locality-level emergency ration reserves.
+  - Door-to-door aid distribution led by YMA volunteer networks.
+
+
+6. ESTIMATED MONTHLY SUPPLY CHAIN REQUIREMENTS
+
+Population Base: ~350,000 | Primary Inbound Corridor: Silchar -> Kolasib -> Aizawl
+
+A. Food and Rations:
+  - Rice (Staple Grain): 3,100 to 3,500 Metric Tons / month
+  - Pulses / Lentils (Dal): 450 to 500 Metric Tons / month
+  - Edible Oil: 300,000 Liters / month
+  - Sugar & Salt: 250 Metric Tons / month
+  - Baby Food & Milk Powder: 80 to 100 Metric Tons / month
+
+B. Medical and Emergency Supplies:
+  - Essential Medicines (Antibiotics, Insulin, Hypertensives): 15 to 20 Tons / month
+  - First Aid & Trauma Kits: 5,000 units / month
+  - IV Fluids (Saline / Dextrose): 40,000 Bottles / month
+  - Water Purification Tablets (Chlorine/Halazone): 1,000,000 tablets / month
+
+C. Construction and Relief Materials:
+  - Tarpaulins & Plastic Sheets: 15,000 units / month
+  - Corrugated Galvanized Iron (CGI) Sheets: 50 Metric Tons / month
+  - Sandbags: 50,000 bags / month
+  - Fuel for Heavy Equipment & Transport (Diesel/Petrol): 1.8 Million Liters / month
+
+D. Additional Essential Disaster Materials:
+  - LPG Cooking Cylinders: 45,000 to 50,000 cylinders / month
+  - Portable Generators & Solar Lanterns: 1,200 units / month
+  - Rain Gear & Protective Workwear: 10,000 sets / month
+
+7. OFFICIAL DATA SOURCES FOR VERIFICATION
+
+* Disaster Management & Rehabilitation, Mizoram: dmr.mizoram.gov.in / aizawl.nic.in
+* Central Water Commission (CWC) Flood Forecasting: ff.cwc.gov.in
+* India Meteorological Department (IMD): mausam.imd.gov.in
+* Mizoram State Council for Science & Technology (MISCST) - Landslide Mapping
