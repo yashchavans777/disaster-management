@@ -14,7 +14,7 @@
     "fastapi": "/opt/miniconda3/bin/python3 -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
     "setup:python": "/opt/miniconda3/bin/pip3 install -r fastapi-server/requirements.txt",
     "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"fastapi-server/**/*.py\" \"server.js\"",
-    "test": "echo \"No automated tests configured yet\"",
+    "test": "node tests/auth.test.js",
     "seed": "node src/utils/seed.js"
   },
   "repository": {
@@ -40,9 +40,11 @@
     "prettier": "^3.3.3"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.4",
     "node-cron": "^4.6.0",
     "socket.io": "^4.8.3"
