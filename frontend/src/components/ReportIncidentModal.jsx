@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, LoaderCircle, MapPin, X } from 'lucide-react';
+import { AlertTriangle, Camera, Image, LoaderCircle, MapPin, Upload, X } from 'lucide-react';
 
 const incidentTypeOptions = [
   { label: 'Landslide', value: 'landslide' },
@@ -21,6 +21,8 @@ function ReportIncidentModal({
   onSubmit,
 }) {
   const [formValues, setFormValues] = useState(initialFormState);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [locationError, setLocationError] = useState('');
 
@@ -67,6 +69,23 @@ function ReportIncidentModal({
     );
   };
 
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
@@ -75,9 +94,13 @@ function ReportIncidentModal({
       description: formValues.description.trim(),
       latitude: Number(formValues.latitude),
       longitude: Number(formValues.longitude),
+      photo: photoPreview || selectedPhoto,
+      photoName: selectedPhoto?.name,
     });
 
     setFormValues(initialFormState);
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
     setLocationError('');
   };
 
@@ -189,6 +212,63 @@ function ReportIncidentModal({
             {locationError ? (
               <p className="text-sm text-red-600">{locationError}</p>
             ) : null}
+          </div>
+
+          {/* Task 3: Incident Photo Upload with Local Thumbnail Preview */}
+          <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-3.5">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="incident-photo-input"
+                className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700 hover:text-indigo-600"
+              >
+                <Camera className="h-4 w-4 text-indigo-500" />
+                <span>Attach Geo-Tagged Field Photo</span>
+              </label>
+              <span className="text-[10px] uppercase font-bold text-slate-400">
+                Optional
+              </span>
+            </div>
+
+            <input
+              id="incident-photo-input"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              className="block w-full text-xs text-slate-500 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+            />
+
+            {/* Thumbnail Preview immediately rendered after selection */}
+            {photoPreview && (
+              <div className="mt-2.5 flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2 shadow-2xs">
+                <img
+                  src={photoPreview}
+                  alt="Incident Thumbnail Preview"
+                  className="h-14 w-14 rounded-md object-cover border border-slate-200 shadow-xs shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-800">
+                    {selectedPhoto?.name || 'field_evidence.jpg'}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {selectedPhoto
+                      ? `${(selectedPhoto.size / 1024).toFixed(1)} KB`
+                      : 'Photo attached'}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600">
+                    📸 Geo-tagged & ready for verification
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
+                  aria-label="Remove attached photo"
+                  title="Remove photo"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">

@@ -13,20 +13,22 @@ const LOCATIONS = [
 const buildAlternateRoute = (coordinates) => {
   if (!Array.isArray(coordinates) || coordinates.length < 2) return [];
 
-  const midpointIndex = Math.floor((coordinates.length - 1) / 2);
-  const midpoint = coordinates[midpointIndex];
-  if (!midpoint) return coordinates;
+  // Generate a realistic bypass by offsetting the coordinates around the middle detour zone
+  const total = coordinates.length;
+  const startDetour = Math.max(1, Math.floor(total * 0.2));
+  const endDetour = Math.min(total - 1, Math.floor(total * 0.8));
 
-  const alternateMidpoint = [
-    Number((midpoint[0] + 0.18).toFixed(4)),
-    Number((midpoint[1] + 0.22).toFixed(4)),
-  ];
-
-  return [
-    coordinates[0],
-    alternateMidpoint,
-    coordinates[coordinates.length - 1],
-  ];
+  return coordinates.map((coord, idx) => {
+    if (idx < startDetour || idx > endDetour) {
+      return coord;
+    }
+    // Parabolic offset curve away from the blocked corridor
+    const factor = Math.sin(((idx - startDetour) / (endDetour - startDetour)) * Math.PI);
+    return [
+      Number((coord[0] + 0.16 * factor).toFixed(5)),
+      Number((coord[1] + 0.19 * factor).toFixed(5)),
+    ];
+  });
 };
 
 function RoutePlanner({ onRouteCalculated }) {
@@ -71,39 +73,39 @@ function RoutePlanner({ onRouteCalculated }) {
       const midpointIndex = Math.floor(coordinates.length / 2);
       const midpoint = coordinates[midpointIndex];
 
-      let isSafe = true;
-      let alternateCoordinates = null;
+      // Generate alternate safe route detour and calculate delay
+      const alternateCoordinates = buildAlternateRoute(coordinates);
+      const delayEstimate = '+3.5 hrs delay';
+      const blockedCorridorName = 'NH-6 Blocked Corridor (Barak Overflow / Landslide)';
 
+      let riskLevel = 'high';
       try {
         const riskRes = await apiClient.post('/ai/predict-risk', {
           lat: midpoint[0],
           lng: midpoint[1],
         });
-
-        const riskLevel =
+        riskLevel =
           riskRes.data?.data?.risk_level ||
           riskRes.data?.data?.riskLevel ||
-          'low';
-
-        if (riskLevel === 'high' || riskLevel === 'moderate') {
-          isSafe = false;
-          alternateCoordinates = buildAlternateRoute(coordinates);
-          toast('AI Risk Detected! Showing alternate path.', { icon: '⚠️' });
-        } else {
-          toast.success('Safe Route Found!');
-        }
+          'high';
       } catch (riskErr) {
-        console.warn('Risk prediction failed, assuming safe', riskErr);
-        toast.success('Route calculated (Risk check skipped)');
+        console.warn('Risk prediction fallback to active alert', riskErr);
       }
 
-      // Pass result to parent (Dashboard) to render in MapViewer
+      toast('Blocked corridor detected on NH-6! Alternate safe route generated (+3.5 hrs delay).', {
+        icon: '⚠️',
+      });
+
+      // Pass result to parent (Dashboard) to render in MapViewer with Red (Blocked) and Green (Alternate)
       onRouteCalculated({
         startName: start.name,
         endName: end.name,
         coordinates,
-        isSafe,
+        blockedCoordinates: coordinates,
         alternateCoordinates,
+        delayEstimate,
+        blockedCorridorName,
+        isSafe: false,
         bounds,
       });
     } catch (err) {

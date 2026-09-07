@@ -6,57 +6,205 @@ import { getApiErrorMessage } from '../api/apiError';
 export default function Chatbot({ isOpen = true, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [query, setQuery] = useState('');
+  const [userInput, setUserInput] = useState('');
   const [messages, setMessages] = useState([
     {
+      id: 1,
+      sender: 'bot',
       role: 'assistant',
       text: 'Hello! I am Logi-Assistant, your Logistics & Disaster Management AI. I can answer questions about real-time incident reports, weather risks, and optimal relief corridors in the North East Region.',
     },
   ]);
   const [isQuerying, setIsQuerying] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Only scroll down on new messages — NO auto-trigger on component mount
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    const question = query.trim();
-    if (!question) return;
+  // Robust streaming send handler with state compatibility & strict object structure
+  const handleSendMessage = async (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-    setMessages((m) => [...m, { role: 'user', text: question }]);
-    setQuery('');
-    setIsQuerying(true);
+    // 1. State Compatibility: safely read input (fallback between userInput and query)
+    const rawInput =
+      typeof userInput !== 'undefined'
+        ? userInput
+        : typeof query !== 'undefined'
+        ? query
+        : '';
+
+    // Guard clause: prevent sending empty requests or double submissions
+    if (!rawInput || !rawInput.trim() || isQuerying || isStreaming) return;
+
+    const textToSend = rawInput.trim();
+
+    // Safely clear input state
+    if (typeof setUserInput === 'function') setUserInput('');
+    if (typeof setQuery === 'function') setQuery('');
+
+    if (typeof setIsQuerying === 'function') setIsQuerying(true);
+    if (typeof setIsStreaming === 'function') setIsStreaming(true);
+
+    const userMessageId = Date.now();
+    const botMessageId = userMessageId + 1;
+
+    // 2. Exact Object Structure: push user message and assistant placeholder
+    setMessages((prev) => [
+      ...prev,
+      { id: userMessageId, sender: 'user', role: 'user', text: textToSend },
+      {
+        id: botMessageId,
+        sender: 'bot',
+        role: 'assistant',
+        text: '',
+        meta: '⚡ Groq (Qwen 3.8 Streaming)',
+        isStreaming: true,
+      },
+    ]);
 
     try {
-      const response = await apiClient.post('/ai/rag-query', { question });
-      const answer =
-        response.data?.data?.answer || 'No answer returned from AI service.';
-      const source = response.data?.data?.source || '';
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: answer,
-          meta: source.includes('fallback')
-            ? '⚡ Local RAG fallback'
-            : '🤖 FastAPI RAG (Gemini)',
-        },
-      ]);
+      // 3. API Fallback Payload: send both question and query to http://127.0.0.1:8000/rag-query
+      let response;
+      const requestPayload = { question: textToSend, query: textToSend };
+
+      try {
+        console.log('Attempting direct connection to http://127.0.0.1:8000/rag-query...');
+        response = await fetch('http://127.0.0.1:8000/rag-query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          body: JSON.stringify(requestPayload),
+        });
+        console.log('FastAPI direct response status:', response.status);
+      } catch (directErr) {
+        console.warn('Direct FastAPI connection failed, attempting proxy fallback /api/ai/rag-query:', directErr.message);
+        try {
+          response = await fetch('/api/ai/rag-query', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
+            },
+            body: JSON.stringify(requestPayload),
+          });
+          console.log('Proxy response status:', response.status, 'Content-Type:', response.headers.get('content-type'));
+        } catch (proxyErr) {
+          console.error('Fallback proxy /api/ai/rag-query also failed:', proxyErr.message);
+          throw new Error(`AI service connection failed (Direct: ${directErr.message} | Proxy: ${proxyErr.message})`);
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`Service returned HTTP status ${response.status}`);
+      }
+
+      // Proxy Fallback Warning: verify stream body is available
+      if (!response.body) {
+        throw new Error('No stream body available from server response');
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      console.log('Response content-type:', contentType);
+
+      // Check if proxy returned a standard non-streamed JSON response
+      if (contentType.includes('application/json')) {
+        console.warn('Warning: Server returned JSON instead of text/plain stream. Parsing JSON body...');
+        const jsonData = await response.json();
+        const finalAnswer =
+          jsonData.data?.answer ||
+          jsonData.answer ||
+          jsonData.message ||
+          JSON.stringify(jsonData);
+
+        setMessages((prev) => {
+          if (!prev || prev.length === 0) return prev;
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            text: finalAnswer,
+            isStreaming: false,
+          };
+          return updated;
+        });
+      } else {
+        // 4. Stream Consumption via native fetch Streams API and TextDecoder
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let accumulatedText = '';
+
+        // 5. Debug & Append: loop chunks and force-append to the last index of messages
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log('DEBUG-STREAM-DONE. Total characters accumulated:', accumulatedText.length);
+            break;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('DEBUG-CHUNK:', chunk);
+
+          if (chunk) {
+            accumulatedText += chunk;
+
+            setMessages((prev) => {
+              if (!prev || prev.length === 0) return prev;
+              const updated = [...prev];
+              const lastIdx = updated.length - 1;
+              updated[lastIdx] = {
+                ...updated[lastIdx],
+                text: accumulatedText,
+                isStreaming: true,
+              };
+              return updated;
+            });
+          }
+        }
+      }
     } catch (error) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          text: `Error: ${getApiErrorMessage(error, 'RAG query failed. Please check the AI service.')}`,
+      console.error('Streaming error in Chatbot:', error);
+      setMessages((prev) => {
+        if (!prev || prev.length === 0) return prev;
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        updated[lastIdx] = {
+          ...updated[lastIdx],
+          text:
+            updated[lastIdx].text ||
+            `⚠️ Error: ${error.message || 'Stream connection failed.'}`,
           isError: true,
-        },
-      ]);
+          isStreaming: false,
+        };
+        return updated;
+      });
     } finally {
-      setIsQuerying(false);
+      // 6. Cleanup: safely toggle all loading & streaming flags to false
+      if (typeof setIsQuerying === 'function') setIsQuerying(false);
+      if (typeof setIsStreaming === 'function') setIsStreaming(false);
+
+      setMessages((prev) => {
+        if (!prev || prev.length === 0) return prev;
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (updated[lastIdx]) {
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            isStreaming: false,
+          };
+        }
+        return updated;
+      });
     }
   };
+
+  const handleAsk = handleSendMessage;
 
   if (!isOpen) return null;
 
@@ -173,41 +321,49 @@ export default function Chatbot({ isOpen = true, onClose }) {
             isFullscreen ? 'mx-auto max-w-4xl' : 'w-full'
           }`}
         >
-          {messages.map((message, i) => (
-            <div
-              key={i}
-              className={`flex ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
+          {messages.map((message, i) => {
+            const isUser = message.sender === 'user' || message.role === 'user';
+            return (
               <div
-                className={`${
-                  isFullscreen ? 'max-w-[80%]' : 'max-w-[90%]'
-                } rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-xs ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : message.isError
-                      ? isDarkMode
-                        ? 'border border-red-800 bg-red-950/80 text-red-200'
-                        : 'border border-red-200 bg-red-50 text-red-700'
-                      : isDarkMode
-                        ? 'border border-gray-800 bg-gray-800 text-gray-100'
-                        : 'border border-slate-200/80 bg-white text-slate-800'
-                }`}
+                key={message.id || i}
+                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="whitespace-pre-wrap">{message.text}</p>
-                {message.meta && (
-                  <p
-                    className={`mt-2 text-xs ${
-                      isDarkMode ? 'text-gray-400' : 'text-slate-400'
-                    }`}
-                  >
-                    {message.meta}
-                  </p>
-                )}
+                <div
+                  className={`${
+                    isFullscreen ? 'max-w-[80%]' : 'max-w-[90%]'
+                  } rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-xs ${
+                    isUser
+                      ? 'bg-blue-600 text-white'
+                      : message.isError
+                        ? isDarkMode
+                          ? 'border border-red-800 bg-red-950/80 text-red-200'
+                          : 'border border-red-200 bg-red-50 text-red-700'
+                        : isDarkMode
+                          ? 'border border-gray-800 bg-gray-800 text-gray-100'
+                          : 'border border-slate-200/80 bg-white text-slate-800'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.text}</p>
+                  {!isUser && message.isStreaming && !message.text && (
+                    <span className="inline-flex space-x-1 items-center py-1">
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-150"></span>
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-300"></span>
+                    </span>
+                  )}
+                  {message.meta && (
+                    <p
+                      className={`mt-2 text-xs ${
+                        isDarkMode ? 'text-gray-400' : 'text-slate-400'
+                      }`}
+                    >
+                      {message.meta}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {isQuerying && (
             <div className="flex justify-start">
@@ -227,7 +383,7 @@ export default function Chatbot({ isOpen = true, onClose }) {
       </div>
 
       {/* Input Form Footer */}
-      <form onSubmit={handleAsk} className={footerClasses}>
+      <form onSubmit={handleSendMessage} className={footerClasses}>
         <div
           className={`flex gap-2.5 ${
             isFullscreen ? 'mx-auto max-w-4xl' : 'w-full'
@@ -235,8 +391,8 @@ export default function Chatbot({ isOpen = true, onClose }) {
         >
           <input
             type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
             placeholder="Ask about flood risks, landslides, routes, or relief logistics…"
             disabled={isQuerying}
             className={`flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition disabled:opacity-60 ${
@@ -247,7 +403,7 @@ export default function Chatbot({ isOpen = true, onClose }) {
           />
           <button
             type="submit"
-            disabled={isQuerying || !query.trim()}
+            disabled={isQuerying || !userInput.trim()}
             className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
           >
             Send
