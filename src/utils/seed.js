@@ -8,10 +8,12 @@ const Route = require('../models/Route');
 const IncidentReport = require('../models/IncidentReport');
 const User = require('../models/user');
 
+const bcrypt = require('bcryptjs');
+
 const mongoUri =
   process.env.MONGO_URI ||
   process.env.MONGODB_URI ||
-  'mongodb://127.0.0.1:27017/smart-logistics-platform';
+  'mongodb://127.0.0.1:27017/disaster-management';
 
 const locations = {
   guwahati: { lat: 26.1445, lng: 91.7362, address: 'Guwahati, Assam' },
@@ -54,20 +56,51 @@ const seedDatabase = async () => {
 
     await clearCollections();
 
-    const [admin, driver] = await User.insertMany([
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = async (pwd) => bcrypt.hash(pwd, salt);
+
+    const [admin, driver, operatorUser, driverUser, managerUser, adminUser] = await User.insertMany([
       {
         name: 'Demo Admin',
         email: 'admin@sih26002.demo',
-        password: 'demo-admin-password',
+        password: await hashPassword('demo-admin-password'),
         role: 'admin',
         phone: '+91-90000-26002',
       },
       {
         name: 'Demo Driver',
         email: 'driver@sih26002.demo',
-        password: 'demo-driver-password',
+        password: await hashPassword('demo-driver-password'),
         role: 'driver',
         phone: '+91-90000-26003',
+      },
+      {
+        name: 'Control Operator',
+        email: 'operator@disaster.org',
+        password: await hashPassword('operator123'),
+        role: 'operator',
+        phone: '+91-98765-00001',
+      },
+      {
+        name: 'Logistics Driver',
+        email: 'driver@disaster.org',
+        password: await hashPassword('driver123'),
+        role: 'driver',
+        phone: '+91-98765-00002',
+      },
+      {
+        name: 'Disaster Manager',
+        email: 'manager@disaster.org',
+        password: await hashPassword('manager123'),
+        role: 'manager',
+        phone: '+91-98765-00003',
+      },
+      {
+        name: 'System Administrator',
+        email: 'admin@disaster.org',
+        password: await hashPassword('admin123'),
+        role: 'admin',
+        phone: '+91-98765-00004',
       },
     ]);
 

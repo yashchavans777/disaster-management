@@ -170,6 +170,7 @@ function AppContent() {
         <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Login />} />
             <Route path="/driver" element={<DriverView />} />
