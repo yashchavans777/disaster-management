@@ -79,13 +79,16 @@ function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const handleModeSwitch = (newMode) => {
+    setErrorMessage(null);
     setMode(newMode);
     setSearchParams(newMode === 'register' ? { mode: 'register' } : {});
   };
 
   const handleInputChange = (e) => {
+    setErrorMessage(null);
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -98,6 +101,7 @@ function Login() {
   };
 
   const handleDemoQuickFill = (roleItem) => {
+    setErrorMessage(null);
     setFormData((prev) => ({
       ...prev,
       email: roleItem.demoEmail,
@@ -110,23 +114,32 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage(null);
 
     if (!formData.email || !formData.password) {
-      toast.error('Please fill in all required fields');
+      const msg = 'Please fill in all required fields';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
     if (mode === 'register') {
       if (!formData.name.trim()) {
-        toast.error('Please enter your full name');
+        const msg = 'Please enter your full name';
+        setErrorMessage(msg);
+        toast.error(msg);
         return;
       }
       if (formData.password.length < 6) {
-        toast.error('Password must be at least 6 characters long');
+        const msg = 'Password must be at least 6 characters long';
+        setErrorMessage(msg);
+        toast.error(msg);
         return;
       }
       if (formData.password !== formData.confirmPassword) {
-        toast.error('Passwords do not match');
+        const msg = 'Passwords do not match';
+        setErrorMessage(msg);
+        toast.error(msg);
         return;
       }
     }
@@ -140,7 +153,7 @@ function Login() {
           password: formData.password,
         });
         toast.success('Welcome back! Signed in successfully.');
-        navigate('/');
+        navigate('/dashboard');
       } else {
         await register({
           name: formData.name,
@@ -150,13 +163,14 @@ function Login() {
           phone: formData.phone,
         });
         toast.success('Account created and signed in successfully!');
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (err) {
       const msg = getApiErrorMessage(
         err,
         mode === 'login' ? 'Failed to sign in. Please verify your credentials.' : 'Failed to create account.'
       );
+      setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -320,6 +334,14 @@ function Login() {
               ))}
             </div>
           </div>
+
+          {/* Error Alert Display */}
+          {errorMessage && (
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 text-rose-800 animate-in fade-in duration-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+              <div className="text-xs font-medium leading-relaxed">{errorMessage}</div>
+            </div>
+          )}
 
           <div className="space-y-4">
             {/* Registration-only: Full Name */}
