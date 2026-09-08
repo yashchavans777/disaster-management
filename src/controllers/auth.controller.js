@@ -1,11 +1,15 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/user');
 const apiResponse = require('../utils/apiResponse');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'disaster_management_jwt_secret_key_2026';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const DB_CONNECTION_ERROR_MESSAGE =
+  'Database is not connected. Please ensure MongoDB is running or configure MONGODB_URI (e.g. MongoDB Atlas) in your .env file.';
 
 /**
  * Helper to generate a signed JWT token containing user metadata.
@@ -48,6 +52,11 @@ const formatSafeUser = (user) => ({
 const register = async (req, res) => {
   try {
     const { name, email, password, role = 'operator', phone } = req.body;
+
+    // Fast-fail if MongoDB is not connected
+    if (mongoose.connection.readyState !== 1) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -127,6 +136,13 @@ const register = async (req, res) => {
       token,
     });
   } catch (err) {
+    if (
+      err.name === 'MongooseError' ||
+      err.message.includes('buffering timed out') ||
+      err.message.includes('ECONNREFUSED')
+    ) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
     return apiResponse.error(
       res,
       500,
@@ -164,23 +180,28 @@ const login = async (req, res) => {
       );
     }
 
-    // 2. Query database for existing user
+    // 2. Fast-fail if MongoDB is not connected
+    if (mongoose.connection.readyState !== 1) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
+
+    // 3. Query database for existing user
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return apiResponse.error(res, 401, 'Invalid email or password.');
     }
 
-    // 3. Securely verify password against stored hashed password
+    // 4. Securely verify password against stored hashed password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return apiResponse.error(res, 401, 'Invalid email or password.');
     }
 
-    // 4. Generate JWT token with user metadata
+    // 5. Generate JWT token with user metadata
     const token = generateToken(user);
     const safeUser = formatSafeUser(user);
 
-    // 5. Optionally set HttpOnly cookie and return JSON payload
+    // 6. Optionally set HttpOnly cookie and return JSON payload
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -193,6 +214,13 @@ const login = async (req, res) => {
       token,
     });
   } catch (err) {
+    if (
+      err.name === 'MongooseError' ||
+      err.message.includes('buffering timed out') ||
+      err.message.includes('ECONNREFUSED')
+    ) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
     return apiResponse.error(
       res,
       500,
@@ -212,6 +240,10 @@ const getMe = async (req, res) => {
       return apiResponse.error(res, 401, 'Invalid user session.');
     }
 
+    if (mongoose.connection.readyState !== 1) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
+
     const user = await User.findById(userId).select('-password');
     if (!user) {
       return apiResponse.error(res, 404, 'User not found.');
@@ -221,6 +253,13 @@ const getMe = async (req, res) => {
       user: formatSafeUser(user),
     });
   } catch (err) {
+    if (
+      err.name === 'MongooseError' ||
+      err.message.includes('buffering timed out') ||
+      err.message.includes('ECONNREFUSED')
+    ) {
+      return apiResponse.error(res, 503, DB_CONNECTION_ERROR_MESSAGE);
+    }
     return apiResponse.error(
       res,
       500,

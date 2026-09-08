@@ -5,6 +5,9 @@
 
 const mongoose = require('mongoose');
 
+// Disable buffering so queries fail immediately if DB is down instead of hanging for 10s
+mongoose.set('bufferCommands', false);
+
 // ANSI colour helpers — works in every modern terminal / concurrently output
 const YELLOW = '\x1b[33m';
 const RED = '\x1b[31m';
@@ -76,9 +79,12 @@ const connectDB = async () => {
     }
 
     process.stderr.write(
-      `\n${YELLOW}  Server will keep running — all DB routes will return 500 until fixed.\n${RESET}\n`
+      `\n${YELLOW}  Server will keep running — DB queries will report 503 until connected.\n${RESET}\n`
     );
   }
 };
 
-module.exports = { connectDB };
+const isDbConnected = () => mongoose.connection.readyState === 1;
+
+module.exports = { connectDB, isDbConnected };
+
