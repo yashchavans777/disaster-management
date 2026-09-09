@@ -31,6 +31,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from utils.weather import get_live_weather
+
 
 # Load .env from the parent directory
 __dirname = os.path.dirname(os.path.abspath(__file__))
@@ -183,6 +185,133 @@ def _compute_risk_score(weather: dict, hist_bias: float = 0.0) -> tuple[float, s
         level = "low"
 
     return round(score, 4), level
+
+
+def _normalize_openweather_for_model(weather: dict) -> dict:
+    """Convert OpenWeatherMap fields into the existing numerical model field names."""
+    return {
+        "temperature": weather.get("current_temp") or 25,
+        "relativehumidity_2m": weather.get("humidity") or 60,
+        "precipitation": weather.get("rainfall_1h") or 0,
+        "rain": weather.get("rainfall_1h") or 0,
+        "windspeed": weather.get("wind_speed") or 0,
+    }
+
+
+def _format_live_weather(weather: dict) -> str:
+    """Format live weather data for compact LLM prompt injection."""
+    if not weather.get("available"):
+        return f"Live weather unavailable ({weather.get('error', 'unknown error')})."
+
+    return (
+        f"Temperature: {weather.get('current_temp')}°C; "
+        f"Humidity / soil-moisture proxy: {weather.get('humidity')}%; "
+        f"Condition: {weather.get('weather_condition')}; "
+        f"Rainfall last 1 hour: {weather.get('rainfall_1h', 0)} mm; "
+        f"Wind speed: {weather.get('wind_speed', 'n/a')} m/s; "
+        f"Nearest station/name: {weather.get('location_name') or 'unknown'}."
+    )
+
+
+def _build_predictive_prompt(historical_rag_data: str, live_weather_data: str) -> str:
+    return (
+        "You are an AI Predictive Analytics Engine for Disaster Management. "
+        "Based on the historical vulnerability of this region: "
+        f"{historical_rag_data} "
+        "AND the LIVE weather conditions: "
+        f"{live_weather_data}, "
+        "predict the current risk level (Low, Moderate, High) for floods/landslides. "
+        "Provide a brief 2-sentence justification. "
+        "Return ONLY valid JSON in this schema: "
+        '{"risk_level":"LOW|MODERATE|HIGH","justification":"two concise sentences"}.'
+    )
+
+
+def _parse_risk_prediction(text: str) -> dict[str, str]:
+    """Parse LLM output into a stable risk payload."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return {}
+
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        risk_level = str(parsed.get("risk_level") or parsed.get("riskLevel") or "").upper()
+        justification = str(parsed.get("justification") or parsed.get("reason") or "").strip()
+        if risk_level in {"LOW", "MODERATE", "HIGH"} and justification:
+            return {"risk_level": risk_level, "justification": justification}
+    except Exception:
+        pass
+
+    level_match = re.search(r"\b(high|moderate|medium|low)\b", cleaned, flags=re.IGNORECASE)
+    risk_level = level_match.group(1).upper() if level_match else "MODERATE"
+    if risk_level == "MEDIUM":
+        risk_level = "MODERATE"
+    return {"risk_level": risk_level, "justification": cleaned[:600]}
+
+
+async def _call_predictive_llm(system_prompt: str) -> dict[str, str]:
+    """Call Groq/Qwen for predictive analytics; return parsed risk payload."""
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    if not groq_key:
+        raise RuntimeError("GROQ_API_KEY is not configured")
+
+    headers = {
+        "Authorization": f"Bearer {groq_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "qwen/qwen3.8-27b",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Evaluate the current disaster risk for these coordinates now."},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 220,
+        "stream": False,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    parsed = _parse_risk_prediction(content)
+    if not parsed:
+        raise RuntimeError("LLM response could not be parsed")
+    return parsed
+
+
+def _fallback_predictive_response(weather: dict, historical_context: str, historical_bias: float = 0.7) -> dict[str, Any]:
+    """Deterministic fallback when LLM/API keys are unavailable."""
+    normalized_weather = _normalize_openweather_for_model(weather)
+    score, level = _compute_risk_score(normalized_weather, historical_bias)
+
+    condition = str(weather.get("weather_condition") or "unknown").lower()
+    rainfall = float(weather.get("rainfall_1h") or 0)
+    humidity = float(weather.get("humidity") or 0)
+    context_lower = historical_context.lower()
+
+    if rainfall >= 10 or "rain" in condition or (humidity >= 88 and "flood" in context_lower):
+        level = "high"
+        score = max(score, 0.72)
+    elif rainfall >= 2.5 or humidity >= 80:
+        level = "moderate" if level == "low" else level
+        score = max(score, 0.45)
+
+    level_upper = level.upper()
+    justification = (
+        f"The current live weather shows {weather.get('weather_condition', 'unknown conditions')} with "
+        f"{rainfall} mm rainfall in the last hour and {humidity}% humidity, which increases flood/landslide sensitivity. "
+        "Historical Silchar/Barak Valley records identify repeated flooding, embankment breach, and corridor disruption patterns, so response teams should monitor vulnerable low-lying and slope-adjacent routes."
+    )
+    return {"risk_level": level_upper, "justification": justification, "risk_score": round(score, 4)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -387,44 +516,60 @@ def health():
 @app.post("/predict-risk")
 async def predict_risk(req: PredictRiskRequest):
     """
-    Deep Learning sigmoid risk predictor.
-    Fetches live weather from Open-Meteo if not supplied in the request body.
+    AI/ML predictive analytics endpoint.
+    Combines live OpenWeatherMap data with Silchar historical RAG context and
+    Groq/Qwen prompt engineering to predict flood/landslide risk.
     """
-    weather = req.weather or {}
+    live_weather = req.weather or await get_live_weather(req.lat, req.lng)
+    raw_history = _load_silchar_history()
+    historical_context = _retrieve_top_chunks(
+        raw_history,
+        "Silchar Cachar Barak flood landslide embankment breach rainfall Betukandi Berenga",
+        top_k=3,
+        max_chars=7000,
+    )
+    live_weather_text = _format_live_weather(live_weather)
+    system_prompt = _build_predictive_prompt(historical_context, live_weather_text)
 
-    if not weather:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                resp = await client.get(
-                    OPEN_METEO_URL,
-                    params={
-                        "latitude": req.lat,
-                        "longitude": req.lng,
-                        "current_weather": "true",
-                        "hourly": "relativehumidity_2m,precipitation",
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                weather = data.get("current_weather", {})
-                # Attach first hourly values
-                hourly = data.get("hourly", {})
-                weather["relativehumidity_2m"] = (hourly.get("relativehumidity_2m") or [60])[0]
-                weather["precipitation"] = (hourly.get("precipitation") or [0])[0]
-        except Exception as exc:
-            weather = {}  # degrade gracefully
+    prediction_source = "groq-qwen-live-weather-rag"
+    risk_score = None
 
-    risk_score, risk_level = _compute_risk_score(weather, req.historical_bias)
+    try:
+        prediction = await _call_predictive_llm(system_prompt)
+    except Exception as exc:
+        print(f"Predictive LLM fallback activated: {exc}")
+        prediction = _fallback_predictive_response(
+            live_weather,
+            historical_context,
+            historical_bias=req.historical_bias or 0.7,
+        )
+        prediction_source = "deterministic-weather-rag-fallback"
+        risk_score = prediction.get("risk_score")
+
+    risk_level = str(prediction.get("risk_level", "MODERATE")).upper()
+    if risk_level == "MEDIUM":
+        risk_level = "MODERATE"
+    if risk_level not in {"LOW", "MODERATE", "HIGH"}:
+        risk_level = "MODERATE"
 
     return {
         "lat": req.lat,
         "lng": req.lng,
-        "risk_score": risk_score,
         "risk_level": risk_level,
-        "weather_used": weather,
-        "model": "DL-sigmoid-v2",
-        "weights": _W.tolist(),
+        "riskLevel": risk_level.lower(),
+        "justification": prediction.get("justification", "Risk evaluated using live weather and historical vulnerability context."),
+        "weather_used": live_weather,
+        "historical_context_preview": historical_context[:700],
+        "prompt_preview": system_prompt[:1200],
+        "risk_score": risk_score,
+        "model": prediction_source,
     }
+
+
+@app.post("/evaluate-risk")
+async def evaluate_risk(req: PredictRiskRequest):
+    """Compatibility endpoint for clients that call POST /evaluate-risk."""
+    return await predict_risk(req)
 
 
 def _retrieve_top_chunks(full_text: str, query: str, top_k: int = 3, max_chars: int = 10000) -> str:

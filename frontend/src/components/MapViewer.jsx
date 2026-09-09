@@ -16,6 +16,7 @@ import { fetchRoute } from '../utils/routing';
 
 import LiveNavigator from './LiveNavigator';
 import Loader from './Loader';
+import RouteRisk from './RouteRisk';
 
 // Custom Vehicle DivIcon for high visibility without 404 image issues
 const vehicleMarkerIcon = L.divIcon({
@@ -456,6 +457,7 @@ function MapViewer({
           <Loader label="Loading routes and shipments..." size="lg" />
         </div>
       ) : null}
+      <RouteRisk destination={destination} />
 
       <MapContainer
         center={SILCHAR_CENTER}
