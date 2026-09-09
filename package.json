@@ -11,13 +11,8 @@
     "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
     "backend": "node server.js",
     "frontend": "npm --prefix frontend run dev",
-<<<<<<< HEAD
-    "fastapi": "python -m uvicorn main:app --app-dir fastapi-server --reload --host 127.0.0.1 --port 8000",
-    "setup:python": "python -m pip install -r fastapi-server/requirements.txt",
-=======
     "fastapi": "python -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
-    "setup:python": "pip install -r fastapi-server/requirements.txt",
->>>>>>> 62902f2d5948d287c3dfc604e453a5fd6be1829c
+    "setup:python": "python -m pip install -r fastapi-server/requirements.txt",
     "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"fastapi-server/**/*.py\" \"server.js\"",
     "test": "node tests/auth.test.js",
     "seed": "node src/utils/seed.js"
@@ -49,11 +44,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-<<<<<<< HEAD
-    "fastapi": "^0.0.8",
-=======
     "jsonwebtoken": "^9.0.3",
->>>>>>> 62902f2d5948d287c3dfc604e453a5fd6be1829c
     "mongoose": "^9.9.4",
     "node-cron": "^4.6.0",
     "socket.io": "^4.8.3"
