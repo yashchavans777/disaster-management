@@ -45,8 +45,8 @@ DISTRICT DISASTER & SMART LOGISTICS PROFILE: AIZAWL CITY, MIZORAM
   - Hlimen
   - Laipuitlang
   - Ramhlun North
-  - Bawngkawn
-  - Edenthar
+  - Bawngkawn 
+  - Edenthar 
 
 * Sinking Zones & Low-Lying Valley Areas:
   - Sairang (Tlawng river valley and water pumping station area)

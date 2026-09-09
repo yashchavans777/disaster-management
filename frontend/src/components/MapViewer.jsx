@@ -142,12 +142,12 @@ const NER_BOUNDS = [
 ];
 const SILCHAR_CENTER = [24.82, 92.8];
 
-// Sub-component to handle map flyToBounds
+// Sub-component to handle map fitBounds
 function MapController({ boundsToFit }) {
   const map = useMap();
   useEffect(() => {
     if (boundsToFit && boundsToFit.length > 0) {
-      map.flyToBounds(boundsToFit, { padding: [50, 50], duration: 1.5 });
+      map.fitBounds(boundsToFit, { padding: [50, 50] });
     }
   }, [boundsToFit, map]);
   return null;

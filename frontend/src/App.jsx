@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogIn, LogOut, Shield, Truck, User, UserPlus } from 'lucide-react';
+import { AlertTriangle, LayoutDashboard, LogIn, LogOut, Shield, Truck, User, UserPlus } from 'lucide-react';
 import { NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -6,10 +6,14 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import Dashboard from './pages/Dashboard';
 import DriverView from './pages/DriverView';
 import Login from './pages/Login';
+import HazardMap from './components/HazardMap';
+import Navbar from './components/Navbar';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 function NavigationSidebar() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -28,7 +32,7 @@ function NavigationSidebar() {
               <Shield className="h-4 w-4" />
             </span>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-600">
-              Control Center
+              {t('Control Center')}
             </p>
           </div>
           <h1 className="mt-2 text-xl font-bold text-slate-900">
@@ -54,7 +58,22 @@ function NavigationSidebar() {
             }
           >
             <LayoutDashboard className="h-4 w-4" />
-            <span>Dashboard</span>
+            <span>{t('Dashboard')}</span>
+          </NavLink>
+
+          <NavLink
+            to="/hazard-zones"
+            className={({ isActive }) =>
+              [
+                'inline-flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition',
+                isActive
+                  ? 'bg-blue-50 text-blue-700 shadow-2xs ring-1 ring-blue-100'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+              ].join(' ')
+            }
+          >
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span>{t('Hazard Zones')}</span>
           </NavLink>
 
           <NavLink
@@ -69,7 +88,7 @@ function NavigationSidebar() {
             }
           >
             <Truck className="h-4 w-4" />
-            <span>Driver View</span>
+            <span>{t('Driver View')}</span>
           </NavLink>
 
           {!isAuthenticated ? (
@@ -166,17 +185,28 @@ function AppContent() {
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <NavigationSidebar />
 
-      <main className="min-h-screen flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Login />} />
-            <Route path="/driver" element={<DriverView />} />
-          </Routes>
-        </div>
-      </main>
+      <div className="flex flex-1 flex-col min-w-0">
+        <Navbar />
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/hazard-zones"
+                element={
+                  <div className="flex min-h-full flex-col gap-6">
+                    <HazardMap />
+                  </div>
+                }
+              />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Login />} />
+              <Route path="/driver" element={<DriverView />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -190,7 +220,9 @@ function App() {
 
   return (
     <AuthProvider>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </AuthProvider>
   );
 }

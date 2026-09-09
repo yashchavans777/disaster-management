@@ -1,12 +1,2 @@
-const express = require('express');
-const {
-  createNotification,
-  getUserNotifications,
-} = require('../controllers/notification.controller');
-
-const router = express.Router();
-
-router.post('/', createNotification);
-router.get('/:userId', getUserNotifications);
-
-module.exports = router;
+// Re-export src/routes/notifications.js for backward compatibility with app.js
+module.exports = require('./notifications');

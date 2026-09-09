@@ -1,0 +1,220 @@
+{
+  "silchar": {
+    "city": "Silchar",
+    "state": "Assam",
+    "center": [24.8333, 92.7789],
+    "zoom": 13,
+    "hazard_zones": [
+      {
+        "id": "silchar-barak-floodplain",
+        "name": "Barak River floodplain",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Critical low-lying floodplain along the Barak River susceptible to severe seasonal overflow and road inundation.",
+        "coordinates": [
+          [24.8380, 92.7850],
+          [24.8450, 92.7960],
+          [24.8420, 92.8120],
+          [24.8310, 92.8050],
+          [24.8260, 92.7900],
+          [24.8320, 92.7800]
+        ]
+      },
+      {
+        "id": "silchar-berenga-betukandi",
+        "name": "Berenga-Betukandi",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Historical dyke breach zone at Berenga-Betukandi resulting in rapid urban submersion.",
+        "coordinates": [
+          [24.8120, 92.7910],
+          [24.8200, 92.8010],
+          [24.8170, 92.8110],
+          [24.8060, 92.8050],
+          [24.8080, 92.7910]
+        ]
+      },
+      {
+        "id": "silchar-malugram-basin",
+        "name": "Malugram Drainage Basin",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Low-lying residential sector vulnerable to river backflow and drainage congestion.",
+        "coordinates": [
+          [24.8410, 92.7680],
+          [24.8490, 92.7760],
+          [24.8440, 92.7850],
+          [24.8340, 92.7780]
+        ]
+      },
+      {
+        "id": "silchar-dudhpatil-foothills",
+        "name": "Dudhpatil Foothill Slopes",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "Steep unreinforced slopes prone to slope collapse and debris runoff during heavy monsoons.",
+        "coordinates": [
+          [24.8550, 92.8100],
+          [24.8620, 92.8190],
+          [24.8580, 92.8280],
+          [24.8500, 92.8200]
+        ]
+      }
+    ]
+  },
+  "aizawl": {
+    "city": "Aizawl",
+    "state": "Mizoram",
+    "center": [23.7271, 92.7176],
+    "zoom": 13,
+    "hazard_zones": [
+      {
+        "id": "aizawl-hunthar-landslide",
+        "name": "Hunthar Active Sinking Zone",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "Major active subsiding zone on NH-54 with continuous ground displacement and slope failure.",
+        "coordinates": [
+          [23.7420, 92.7050],
+          [23.7500, 92.7130],
+          [23.7460, 92.7220],
+          [23.7380, 92.7150]
+        ]
+      },
+      {
+        "id": "aizawl-laipuitlang-escarpment",
+        "name": "Laipuitlang Hillside Slope",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "Steep shale rock formation area with high rockfall and landslide hazard.",
+        "coordinates": [
+          [23.7310, 92.7220],
+          [23.7370, 92.7300],
+          [23.7330, 92.7380],
+          [23.7250, 92.7310]
+        ]
+      },
+      {
+        "id": "aizawl-chite-lui-basin",
+        "name": "Chite Lui River Channel",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Valley bottom stream prone to torrential flash floods and sediment accumulation.",
+        "coordinates": [
+          [23.7150, 92.7380],
+          [23.7230, 92.7470],
+          [23.7190, 92.7560],
+          [23.7100, 92.7480]
+        ]
+      }
+    ]
+  },
+  "tawang": {
+    "city": "Tawang",
+    "state": "Arunachal Pradesh",
+    "center": [27.5860, 91.8594],
+    "zoom": 13,
+    "hazard_zones": [
+      {
+        "id": "tawang-chu-valley",
+        "name": "Tawang Chu River Valley",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Glacial riverbed corridor vulnerable to flash floods and sudden discharge surges.",
+        "coordinates": [
+          [27.5920, 91.8620],
+          [27.6020, 91.8730],
+          [27.5970, 91.8860],
+          [27.5870, 91.8760]
+        ]
+      },
+      {
+        "id": "tawang-lhou-slope",
+        "name": "Lhou Mudslide & Debris Corridor",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "High gradient hill slopes with loose glacial debris prone to mass wasting.",
+        "coordinates": [
+          [27.5620, 91.8350],
+          [27.5710, 91.8440],
+          [27.5660, 91.8530],
+          [27.5570, 91.8440]
+        ]
+      },
+      {
+        "id": "tawang-kitpi-ridge",
+        "name": "Kitpi Ridge Slope",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "Fragile mountain face along critical access roads with frequent soil slips.",
+        "coordinates": [
+          [27.5760, 91.8480],
+          [27.5840, 91.8560],
+          [27.5800, 91.8660],
+          [27.5710, 91.8580]
+        ]
+      }
+    ]
+  },
+  "guwahati": {
+    "city": "Guwahati",
+    "state": "Assam",
+    "center": [26.1445, 91.7362],
+    "zoom": 13,
+    "hazard_zones": [
+      {
+        "id": "guwahati-brahmaputra-floodplain",
+        "name": "Brahmaputra South Bank Floodplain",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Riverside stretch spanning Pandu to Bharalumukh exposed to high water levels and riverbank erosion.",
+        "coordinates": [
+          [26.1550, 91.7100],
+          [26.1680, 91.7310],
+          [26.1630, 91.7510],
+          [26.1500, 91.7410],
+          [26.1460, 91.7210]
+        ]
+      },
+      {
+        "id": "guwahati-anil-nagar-basin",
+        "name": "Anil Nagar - Nabin Nagar Basin",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "Severely waterlogged low basin during monsoon downpours with critical urban flooding.",
+        "coordinates": [
+          [26.1740, 91.7640],
+          [26.1840, 91.7760],
+          [26.1790, 91.7870],
+          [26.1690, 91.7770]
+        ]
+      },
+      {
+        "id": "guwahati-narakasur-escarpment",
+        "name": "Narakasur Hills Escarpment",
+        "hazard_type": "landslide",
+        "hazardType": "landslide",
+        "risk_level": "High Risk: Landslide Zone",
+        "description": "Hill cutting and deforested steep slopes creating high landslide risk for foothill settlements.",
+        "coordinates": [
+          [26.1420, 91.7650],
+          [26.1510, 91.7750],
+          [26.1470, 91.7860],
+          [26.1370, 91.7760]
+        ]
+      }
+    ]
+  }
+}

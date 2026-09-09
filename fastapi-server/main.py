@@ -985,6 +985,62 @@ async def get_silchar_weather():
         "rain_expected_in_next_48h": rain_expected_in_next_48h,
         "rain_days":                 rain_days,
         "risk_advisory":             advisory,
-        "rain_threshold_pct":        RAIN_PROBABILITY_THRESHOLD,
         "fetched_at":                time.time(),
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── HAZARD ZONES (FLOOD & LANDSLIDE HIGH-RISK AREAS) ───────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+HAZARD_ZONES_FILE = os.path.join(DATA_DIR, "hazard_zones.json")
+
+
+def _load_hazard_zones_data() -> dict:
+    if os.path.exists(HAZARD_ZONES_FILE):
+        try:
+            with open(HAZARD_ZONES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error reading hazard_zones.json: {e}")
+    return {}
+
+
+@app.get("/api/hazard-zones/{city_name}")
+def get_city_hazard_zones(city_name: str):
+    """
+    Returns government-designated high-risk areas (flood/landslide) with polygon coordinates
+    for the requested city: Silchar, Aizawl, Tawang, or Guwahati.
+    """
+    data = _load_hazard_zones_data()
+    # Normalize city_name (e.g. "Silchar, Assam" -> "silchar")
+    normalized = city_name.strip().lower().split(",")[0].strip()
+
+    if normalized not in data:
+        # Check partial match
+        matched_key = next((k for k in data if k in normalized or normalized in k), None)
+        if matched_key:
+            normalized = matched_key
+
+    if normalized not in data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Hazard zones not found for '{city_name}'. Available cities: {', '.join(data.keys())}",
+        )
+
+    city_data = data[normalized]
+    return {
+        "status": "success",
+        "city": city_data.get("city", normalized.capitalize()),
+        "state": city_data.get("state", "NER"),
+        "center": city_data.get("center"),
+        "zoom": city_data.get("zoom", 13),
+        "hazard_zones": city_data.get("hazard_zones", []),
+        "zones": city_data.get("hazard_zones", []),
+    }
+
+
+@app.get("/api/hazard-zones")
+def get_all_hazard_zones():
+    """Returns hazard zones dictionary for all supported cities."""
+    return _load_hazard_zones_data()

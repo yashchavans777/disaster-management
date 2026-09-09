@@ -22,6 +22,8 @@ import RoutePlanner from '../components/RoutePlanner';
 import CityDetailMap from '../components/CityDetailMap';
 import Chatbot from '../components/Chatbot';
 import ConnectivityMatrix from '../components/ConnectivityMatrix';
+import HazardMap from '../components/HazardMap';
+import { useLanguage } from '../context/LanguageContext';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
@@ -344,6 +346,7 @@ function AnalyticsSection({ shipments }) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 function Dashboard() {
+  const { t } = useLanguage();
   const [shipments, setShipments] = useState(() => readCachedShipments());
   const [isLoading, setIsLoading] = useState(
     () => readCachedShipments().length === 0
@@ -672,8 +675,8 @@ function Dashboard() {
             className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isEvaluatingRisk
-              ? 'Evaluating...'
-              : '🧠 Evaluate Route Risks (DL)'}
+              ? t('Evaluating...')
+              : `🧠 ${t('Evaluate Route Risks (DL)')}`}
           </button>
 
           <button
@@ -682,7 +685,7 @@ function Dashboard() {
             disabled={isLoading}
             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
           >
-            {isLoading ? 'Refreshing...' : '↻ Refresh'}
+            {isLoading ? `↻ ${t('Refreshing...')}` : `↻ ${t('Refresh')}`}
           </button>
         </div>
 
@@ -731,7 +734,8 @@ function Dashboard() {
             type="button"
             onClick={() => setIsIncidentModalOpen(true)}
             className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-200"
-            aria-label="Open incident reporting modal"
+            aria-label={t('Report Incident')}
+            title={t('Report Incident')}
           >
             <span className="text-3xl leading-none">+</span>
           </button>
@@ -776,6 +780,11 @@ function Dashboard() {
 
         {/* Hyper-Local Street Map with Boundary Isolation */}
         <CityDetailMap selectedCity={selectedCity} />
+      </section>
+
+      {/* Task: City-Wise High-Risk Hazard Map */}
+      <section className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100">
+        <HazardMap />
       </section>
 
       <ReportIncidentModal

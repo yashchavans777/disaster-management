@@ -8,6 +8,7 @@ const weatherService = require('../services/weather.service');
 const aiRouteService = require('../services/aiRoute.service');
 const gisService = require('../services/gis.service');
 const IncidentReport = require('../models/IncidentReport');
+const { sendEarlyWarningAlert } = require('../services/notificationService');
 const apiResponse = require('../utils/apiResponse');
 const logger = require('../utils/logger');
 
@@ -38,6 +39,29 @@ const predictRisk = async (req, res) => {
 
       if (fastapiRes.ok) {
         const data = await fastapiRes.json();
+
+        // ── Early Warning Trigger: Check if riskLevel is HIGH ─────────────────
+        const evaluatedRisk = String(data.risk_level || data.riskLevel || '').toUpperCase();
+        if (evaluatedRisk === 'HIGH') {
+          const locStr = `Coordinates [${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}]`;
+          const hazardDesc = data.weather_used
+            ? `Severe Weather (Wind: ${data.weather_used.windspeed || 0} km/h, Rain: ${data.weather_used.precipitation || data.weather_used.rain || 0} mm)`
+            : 'Critical flood / landslide vulnerability detected by AI model';
+
+          // Asynchronously trigger early warning alert without blocking API response
+          setImmediate(() => {
+            sendEarlyWarningAlert(
+              locStr,
+              'HIGH',
+              hazardDesc,
+              req.body.adminPhone || process.env.ADMIN_PHONE,
+              req.body.adminEmail || process.env.ADMIN_EMAIL
+            ).catch((alertErr) => {
+              logger.error(`[Early Warning Background Error] ${alertErr.message}`);
+            });
+          });
+        }
+
         return apiResponse.success(
           res,
           200,
@@ -60,6 +84,24 @@ const predictRisk = async (req, res) => {
       lat,
       lng
     );
+
+    // ── Early Warning Trigger (Fallback): Check if riskLevel is HIGH ───────────
+    if (String(riskLevel).toUpperCase() === 'HIGH') {
+      const locStr = `Coordinates [${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}]`;
+      const hazardDesc = 'Monsoon flash flood / landslide hazard detected by DL model';
+
+      setImmediate(() => {
+        sendEarlyWarningAlert(
+          locStr,
+          'HIGH',
+          hazardDesc,
+          req.body.adminPhone || process.env.ADMIN_PHONE,
+          req.body.adminEmail || process.env.ADMIN_EMAIL
+        ).catch((alertErr) => {
+          logger.error(`[Early Warning Background Error] ${alertErr.message}`);
+        });
+      });
+    }
 
     return apiResponse.success(
       res,

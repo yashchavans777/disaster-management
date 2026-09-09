@@ -21,6 +21,7 @@ const trackingRoutes = require('./routes/tracking.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const aiRoutes = require('./routes/ai.routes');
 const authRoutes = require('./routes/auth.routes');
+const translateRoutes = require('./routes/translate.routes');
 
 const { startWeatherCron } = require('./jobs/weatherCron');
 const { startSyncWorker } = require('./jobs/syncWorker');
@@ -66,6 +67,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/translate', translateRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
