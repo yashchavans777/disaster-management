@@ -21,6 +21,7 @@ import WeatherWidget from '../components/WeatherWidget';
 import RoutePlanner from '../components/RoutePlanner';
 import CityDetailMap from '../components/CityDetailMap';
 import Chatbot from '../components/Chatbot';
+import ConnectivityMatrix from '../components/ConnectivityMatrix';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
 const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
@@ -736,6 +737,9 @@ function Dashboard() {
           </button>
         </div>
       </section>
+
+      {/* Task 2: District Connectivity Matrix */}
+      <ConnectivityMatrix />
 
       {/* Hyper-Local City View Section */}
       <section className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100">

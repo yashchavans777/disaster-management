@@ -125,13 +125,21 @@ const ragQuery = async (req, res) => {
         signal: AbortSignal.timeout(60000),
       });
 
-      const data = await fastapiRes.json();
-      return apiResponse.success(
-        res,
-        fastapiRes.ok ? 200 : fastapiRes.status,
-        'RAG query response',
-        data
-      );
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Cache-Control', 'no-cache');
+
+      if (!fastapiRes.body) {
+        return res.end();
+      }
+
+      const reader = fastapiRes.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      return res.end();
     } catch (fetchErr) {
       logger.error(`FastAPI RAG error: ${fetchErr.message}`);
       return apiResponse.success(res, 200, 'RAG query service error', {

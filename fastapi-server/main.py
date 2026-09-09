@@ -1,27 +1,22 @@
-"""
-Smart Logistics Platform — FastAPI AI Microservice
-===================================================
-Provides five AI/data endpoints for the SIH26002 prototype:
-
-  POST /predict-risk      — Deep Learning sigmoid risk predictor
-  POST /rag-query         — RAG-powered admin assistant (retrieves incidents, generates answer)
-  POST /graph-route       — A* pathfinding over the NER city graph
-  POST /agentic-loop      — Full autonomous pipeline: incident → DL → route → broadcast payload
-  GET  /api/weather/silchar — Live weather + 2-day forecast for Silchar, Assam (Open-Meteo, no key)
-
-All endpoints degrade gracefully if upstream services (Open-Meteo, Node.js API) are unavailable.
-"""
+ 
 
 import asyncio
 import datetime
 import json
 import math
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Optional
 
-import google.generativeai as genai
+try:
+    from groq import Groq
+    HAS_GROQ = True
+except ImportError:
+    HAS_GROQ = False
+    Groq = None
+
 import httpx
 import numpy as np
 import pymongo
@@ -33,6 +28,7 @@ except ImportError:
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 
@@ -40,12 +36,15 @@ from pydantic import BaseModel, Field
 __dirname = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(os.path.dirname(__dirname), '.env'))
 load_dotenv(os.path.join(__dirname, '.env'))
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
+
+# Groq client initialization
+GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
+groq_client = None
+if HAS_GROQ and GROQ_API_KEY:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
+        groq_client = Groq(api_key=GROQ_API_KEY)
     except Exception as _e:
-        print(f"Warning: Failed to configure Google Generative AI SDK: {_e}")
+        print(f"Warning: Failed to initialize Groq client: {_e}")
 
 NODE_API_URL = os.getenv("NODE_API_URL", "http://localhost:5055/api")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -59,16 +58,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5055"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── NER GRAPH (mirrors gis.service.js) ────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
+ 
 
 NER_GRAPH: dict[str, dict] = {
     "guwahati":  {"coord": [26.1445, 91.7362], "edges": {"shillong": 1.0, "silchar": 1.2, "dibrugarh": 1.0}},
@@ -341,10 +337,8 @@ def _load_silchar_history() -> str:
             with open(SILCHAR_HISTORY_FILE, "r", encoding="utf-8") as f:
                 return f.read().strip()
         except Exception as e:
-            print(f"Error reading silchar_history.txt: {e}")
+            pass
     return ""
-
-
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -359,7 +353,8 @@ class PredictRiskRequest(BaseModel):
 
 
 class RagQueryRequest(BaseModel):
-    question: str
+    question: Optional[str] = None
+    query: Optional[str] = None
     context: Optional[str] = None
     incident_count: int = 0
 
@@ -432,56 +427,141 @@ async def predict_risk(req: PredictRiskRequest):
     }
 
 
+def _retrieve_top_chunks(full_text: str, query: str, top_k: int = 3, max_chars: int = 10000) -> str:
+    """Clamps RAG retrieval to top 2-3 most relevant chunks and ensures <= max_chars."""
+    if not full_text:
+        return ""
+    if len(full_text) <= max_chars:
+        return full_text
+
+    # Split into sections by date or double newline
+    chunks = [c.strip() for c in re.split(r'\n(?=Date:|\d{4}-\d{2}-\d{2}|\b[A-Z][a-z]+ \d{1,2}, \d{4})|\n\n+', full_text) if c.strip()]
+    if not chunks:
+        return full_text[:max_chars]
+
+    query_words = set(re.findall(r'\w+', query.lower())) - {"the", "a", "an", "is", "in", "at", "to", "for", "of", "and", "or"}
+    scored = []
+    for idx, c in enumerate(chunks):
+        c_words = set(re.findall(r'\w+', c.lower()))
+        score = len(query_words.intersection(c_words))
+        scored.append((score, idx, c))
+
+    # Sort primarily by keyword matches, secondarily preserving most recent chunks
+    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    top_chunks = [c for _, _, c in scored[:top_k]]
+    combined = "\n\n---\n\n".join(top_chunks)
+    if len(combined) > max_chars:
+        combined = combined[:max_chars] + "\n\n[Context truncated to fit token limits]"
+    return combined
+
+
 @app.post("/rag-query")
 async def rag_query(req: RagQueryRequest):
     """
-    RAG-powered admin assistant powered by Google Gemini SDK.
-    Reads data/silchar_history.txt as context, queries Google Gemini (gemini-1.5-flash),
-    and falls back gracefully to deterministic local synthesis if GEMINI_API_KEY is unset.
+    RAG-powered logistics & disaster management assistant with True Streaming (SSE / Chunked).
+    Reads context from slichar.txt, queries Groq with stream=True,
+    and returns token-by-token chunks using FastAPI's StreamingResponse.
     """
-    user_query = req.question.strip()
-    if not user_query or len(user_query) < 3:
-        raise HTTPException(status_code=400, detail="question must be at least 3 characters")
+    user_query = (req.question or req.query or "").strip()
+    if not user_query:
+        raise HTTPException(status_code=400, detail="question or query cannot be empty")
 
-    # Read context from data/silchar_history.txt
-    file_content = _load_silchar_history()
+    # 1. Inspect & Clamp RAG Document Retrieval (top 2-3 chunks maximum, <= 10000 chars)
+    raw_content = req.context or _load_silchar_history()
+    file_content = _retrieve_top_chunks(raw_content, user_query, top_k=3, max_chars=10000)
 
-    prompt = f"""You are 'Logi-Assistant', a highly intelligent Disaster Management and Logistics AI for the North East Region.
+    system_prompt = (
+        "You are 'Logi-Assistant', a highly advanced, professional, and empathetic Logistics & Disaster Management AI "
+        "for the North East Region (NER).\n\n"
+        f"LOCAL KNOWLEDGE BASE (Your primary source of truth):\n{file_content}\n\n"
+        "CRITICAL INSTRUCTIONS FOR YOUR BEHAVIOR:\n"
+        "1. Act as the intelligent bridge between the user and the regional disaster data.\n"
+        "2. ANALYZE AND LEARN: Read the Local Knowledge Base deeply. Look for specific metrics, patterns, limits "
+        "(e.g., 85% rainfall thresholds, 19.83m river danger levels, specific blocked highways like NH-6, landslides at Jatinga Lampur, breaches at Berenga Betukandi).\n"
+        "3. BLEND KNOWLEDGE: Extract exact facts from the Local Knowledge Base, and combine those facts with your general "
+        "logistics knowledge to give a rich, complete, and conversational answer.\n"
+        "4. CONVERSATIONAL TONE: Never say 'According to the file' or 'The text says'. Speak like an experienced emergency operations controller.\n"
+        "5. GENERAL QUERIES: If the user says 'Hi' or asks general logistics questions, answer naturally and professionally.\n"
+        "6. NO CODE: Never output raw code blocks or JSON unless specifically requested. Use beautiful Markdown formatting with bullet points and bold highlights."
+    )
 
-LOCAL KNOWLEDGE BASE (Your primary source of truth):
-{file_content}
+    # 2. Hard Character Clamping on system_prompt (staying under ~3,500 tokens / 14,000 chars)
+    MAX_CONTEXT_CHARS = 14000
+    if len(system_prompt) > MAX_CONTEXT_CHARS:
+        system_prompt = system_prompt[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated to fit token limits]"
 
-CRITICAL INSTRUCTIONS FOR YOUR BEHAVIOR:
-1. Act as the intelligent bridge between the user and the data.
-2. ANALYZE AND LEARN: Read the Local Knowledge Base deeply. Look for specific metrics, patterns, limits (e.g., 85% rainfall, 19.83m danger levels, specific blocked highways).
-3. BLEND KNOWLEDGE: When answering, FIRST extract exact facts from the Local Knowledge Base. THEN, combine those facts with your general Gemini knowledge to give a rich, complete, and conversational answer.
-4. CONVERSATIONAL TONE: Never say "According to the file" or "The text says". Talk like a human expert. (e.g., "At 85% excess rainfall, Silchar enters a red alert phase. Generally, in such conditions, it's advised to...")
-5. GENERAL QUERIES: If the user just says "Hi" or asks unrelated questions, answer naturally using your general knowledge.
-6. NO CODE: Never output code blocks, raw JSON, or overly complex formatting unless specifically requested. Keep it readable and helpful.
+    # 3. Add Token Length Debugging
+    estimated_tokens = (len(system_prompt) + len(user_query)) // 4
+    print(f"DEBUG-INPUT-SIZE: ~{estimated_tokens} tokens ({len(system_prompt)} chars)")
 
-User Question: {user_query}
-Logi-Assistant's Answer:"""
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
 
-    gemini_key = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if gemini_key:
-        genai.configure(api_key=gemini_key)
+    async def token_generator():
+        print("DEBUG: Generator started")
+        if not groq_key:
+            print("DEBUG-TOKEN: [MISSING GROQ_API_KEY]")
+            yield "⚠️ **Groq API Key Missing:** Please add `GROQ_API_KEY=your_key_here` to your `.env` file to enable ultra-fast streaming."
+            return
 
-    try:
-        # API ne khud gemini-3.6-flash use karne bola hai
-        print("✅ Using API-recommended model: gemini-3.6-flash")
-        model = genai.GenerativeModel("gemini-3.6-flash")
-        
-        # Answer generate kar rahe hain
-        response = await model.generate_content_async(prompt)
-        return {"answer": response.text, "source": "🤖 Gemini AI"}
-        
-    except Exception as e:
-        error_msg = str(e)
-        print(f"\n❌ GEMINI API ERROR: {error_msg}\n")
-        return {
-            "answer": f"⚠️ **Gemini API Error:** {error_msg}",
-            "source": "System Error"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json",
         }
+        # 4. Ensure Output Limit (800 tokens max, well below 1000 limit)
+        payload = {
+            "model": "qwen/qwen3.8-27b",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_query},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 800,
+            "stream": True,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                ) as resp:
+                    if resp.status_code != 200:
+                        error_bytes = await resp.aread()
+                        error_text = error_bytes.decode("utf-8", errors="replace")
+                        print(f"DEBUG-GROQ-ERROR: {error_text}")
+                        yield f"⚠️ **Groq API Error ({resp.status_code}):** {error_text}"
+                        return
+
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data: "):
+                            raw_data = line[6:].strip()
+                            if raw_data == "[DONE]":
+                                break
+                            try:
+                                chunk_json = json.loads(raw_data)
+                                delta = chunk_json.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                if delta:
+                                    print(f"DEBUG-TOKEN: '{delta}'")
+                                    yield delta
+                            except Exception as parse_err:
+                                pass
+        except Exception as e:
+            print(f"DEBUG-FATAL-CRASH: {str(e)}")
+            yield f"\n\n⚠️ **Groq Streaming Error:** {str(e)}"
+
+    return StreamingResponse(
+        token_generator(),
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.post("/sync-data-to-db")
