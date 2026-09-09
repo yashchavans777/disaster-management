@@ -7,6 +7,8 @@ import {
   Popup,
   TileLayer,
   Tooltip,
+  useMap,
+  useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
 import apiClient from '../api/apiClient';
@@ -54,6 +56,18 @@ const activeDeliveryMarkerIcon = L.divIcon({
   popupAnchor: [0, -20],
 });
 
+const destinationMarkerIcon = L.divIcon({
+  className: 'clicked-destination-marker',
+  html: `
+    <div style="background: linear-gradient(135deg, #dc2626, #f97316); width: 36px; height: 36px; border-radius: 999px 999px 999px 8px; transform: rotate(-45deg); border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <span style="transform: rotate(45deg); color: white; font-size: 16px;">🏠</span>
+    </div>
+  `,
+  iconSize: [36, 36],
+  iconAnchor: [18, 34],
+  popupAnchor: [0, -34],
+});
+
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
 const riskColors = {
   low: '#16a34a',
@@ -63,6 +77,10 @@ const riskColors = {
 
 const SOCKET_SERVER_URL =
   import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_STREETS_TILE_URL = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`;
+const FALLBACK_TILE_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 const ANIMATION_DURATION_MS = 900;
 
 const getVehicleKeys = (vehicle = {}) =>
@@ -162,8 +180,6 @@ const animateVehicleMovement = (vehicle, update, onFrame) => {
   return () => cancelAnimationFrame(animationFrameId);
 };
 
-import { useMap } from 'react-leaflet';
-
 const NER_BOUNDS = [
   [21.0, 89.0], // SouthWest
   [29.5, 97.5], // NorthEast
@@ -183,6 +199,17 @@ function MapController({ boundsToFit }) {
   return null;
 }
 
+function MapClickHandler({ onDestinationSelect }) {
+  useMapEvents({
+    click(event) {
+      const { lat, lng } = event.latlng;
+      onDestinationSelect([lat, lng]);
+    },
+  });
+
+  return null;
+}
+
 function MapViewer({
   activeVehicles = [],
   routes = [],
@@ -190,6 +217,9 @@ function MapViewer({
   plannerRoute = null,
 }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
+  const [destination, setDestination] = useState(
+    BERENGA_BETUKANDI_FLOOD_ZONE
+  );
   const [routeCoords, setRouteCoords] = useState([]);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
@@ -201,7 +231,7 @@ function MapViewer({
       try {
         const coordinates = await fetchRoute(
           SILCHAR_RELIEF_WAREHOUSE,
-          BERENGA_BETUKANDI_FLOOD_ZONE
+          destination
         );
 
         if (isMounted) {
@@ -220,7 +250,7 @@ function MapViewer({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [destination]);
 
   useEffect(() => {
     setLiveVehicles((currentVehicles) => {
@@ -431,7 +461,7 @@ function MapViewer({
         center={SILCHAR_CENTER}
         zoom={7}
         minZoom={6}
-        maxZoom={18}
+        maxZoom={20}
         maxBounds={NER_BOUNDS}
         zoomAnimation={true}
         fadeAnimation={true}
@@ -439,10 +469,17 @@ function MapViewer({
         className="h-full min-h-[360px] w-full sm:min-h-[420px]"
       >
         <MapController boundsToFit={plannerRoute?.bounds} />
+        <MapClickHandler onDestinationSelect={setDestination} />
 
         <TileLayer
-          attribution='Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+          attribution={
+            MAPBOX_TOKEN
+              ? '© Mapbox © OpenStreetMap'
+              : 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+          }
+          maxZoom={20}
+          tileSize={256}
+          url={MAPBOX_TOKEN ? MAPBOX_STREETS_TILE_URL : FALLBACK_TILE_URL}
         />
 
         {routes.map((route) => (
@@ -470,7 +507,9 @@ function MapViewer({
                 <span className="block font-bold text-blue-700">
                   Live OSRM Navigation Route
                 </span>
-                <span>Silchar Relief Warehouse → Berenga-Betukandi Flood Zone</span>
+                <span>
+                  Silchar Relief Warehouse → selected relief destination
+                </span>
               </div>
             </Popup>
           </Polyline>
@@ -483,6 +522,22 @@ function MapViewer({
                 🚚 Silchar Relief Warehouse
               </span>
               <span>Dispatch origin for emergency supplies.</span>
+            </div>
+          </Popup>
+        </Marker>
+
+        <Marker position={destination} icon={destinationMarkerIcon}>
+          <Popup>
+            <div className="p-1 text-xs">
+              <span className="block font-bold text-orange-700">
+                🏠 Selected Relief Destination
+              </span>
+              <span className="block text-slate-600">
+                Click any home or area on the map to reroute supplies here.
+              </span>
+              <span className="mt-1 block font-mono text-[11px] text-slate-500">
+                {destination[0].toFixed(5)}, {destination[1].toFixed(5)}
+              </span>
             </div>
           </Popup>
         </Marker>
