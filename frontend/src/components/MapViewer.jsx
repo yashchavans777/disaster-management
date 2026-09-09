@@ -10,6 +10,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import apiClient from '../api/apiClient';
+import { fetchRoute } from '../utils/routing';
 
 import Loader from './Loader';
 
@@ -24,6 +25,33 @@ const vehicleMarkerIcon = L.divIcon({
   iconSize: [34, 34],
   iconAnchor: [17, 17],
   popupAnchor: [0, -18],
+});
+
+const warehouseMarkerIcon = L.divIcon({
+  className: 'warehouse-transport-marker',
+  html: `
+    <div style="background: linear-gradient(135deg, #047857, #10b981); width: 38px; height: 38px; border-radius: 12px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; cursor: pointer;">
+      🚚
+    </div>
+  `,
+  iconSize: [38, 38],
+  iconAnchor: [19, 19],
+  popupAnchor: [0, -20],
+});
+
+const activeDeliveryMarkerIcon = L.divIcon({
+  className: 'active-delivery-marker',
+  html: `
+    <div style="position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; width: 42px; height: 42px; border-radius: 999px; background: rgba(37, 99, 235, 0.22); animation: pulse 1.6s infinite;"></div>
+      <div style="position: relative; background: linear-gradient(135deg, #1d4ed8, #60a5fa); width: 32px; height: 32px; border-radius: 999px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; cursor: pointer;">
+        🚛
+      </div>
+    </div>
+  `,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -20],
 });
 
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
@@ -141,6 +169,8 @@ const NER_BOUNDS = [
   [29.5, 97.5], // NorthEast
 ];
 const SILCHAR_CENTER = [24.82, 92.8];
+const SILCHAR_RELIEF_WAREHOUSE = [24.8333, 92.7789];
+const BERENGA_BETUKANDI_FLOOD_ZONE = [24.815, 92.795];
 
 // Sub-component to handle map flyToBounds
 function MapController({ boundsToFit }) {
@@ -160,8 +190,37 @@ function MapViewer({
   plannerRoute = null,
 }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
+  const [routeCoords, setRouteCoords] = useState([]);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRoute = async () => {
+      try {
+        const coordinates = await fetchRoute(
+          SILCHAR_RELIEF_WAREHOUSE,
+          BERENGA_BETUKANDI_FLOOD_ZONE
+        );
+
+        if (isMounted) {
+          setRouteCoords(coordinates);
+        }
+      } catch (error) {
+        console.warn('MapViewer: OSRM route fetch error:', error);
+        if (isMounted) {
+          setRouteCoords([]);
+        }
+      }
+    };
+
+    loadRoute();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     setLiveVehicles((currentVehicles) => {
@@ -400,6 +459,49 @@ function MapViewer({
             }}
           />
         ))}
+
+        {routeCoords.length > 0 && (
+          <Polyline
+            positions={routeCoords}
+            pathOptions={{ color: 'blue', opacity: 0.7, weight: 5 }}
+          >
+            <Popup>
+              <div className="p-1 text-xs">
+                <span className="block font-bold text-blue-700">
+                  Live OSRM Navigation Route
+                </span>
+                <span>Silchar Relief Warehouse → Berenga-Betukandi Flood Zone</span>
+              </div>
+            </Popup>
+          </Polyline>
+        )}
+
+        <Marker position={SILCHAR_RELIEF_WAREHOUSE} icon={warehouseMarkerIcon}>
+          <Popup>
+            <div className="p-1 text-xs">
+              <span className="block font-bold text-emerald-700">
+                🚚 Silchar Relief Warehouse
+              </span>
+              <span>Dispatch origin for emergency supplies.</span>
+            </div>
+          </Popup>
+        </Marker>
+
+        {routeCoords.length > 0 && (
+          <Marker
+            position={routeCoords[Math.floor(routeCoords.length * 0.35)]}
+            icon={activeDeliveryMarkerIcon}
+          >
+            <Popup>
+              <div className="p-1 text-xs">
+                <span className="block font-bold text-blue-700">
+                  🚛 Active Delivery Vehicle
+                </span>
+                <span>Medical and relief supplies en route to flood zone.</span>
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* Task 4: Alternate Route Polylines (Red = Blocked Corridor, Green = Alternate Safe Route) */}
         {plannerRoute && (
