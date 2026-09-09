@@ -7,11 +7,16 @@ import {
   Popup,
   TileLayer,
   Tooltip,
+  useMap,
+  useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
 import apiClient from '../api/apiClient';
+import { fetchRoute } from '../utils/routing';
 
+import LiveNavigator from './LiveNavigator';
 import Loader from './Loader';
+import RouteRisk from './RouteRisk';
 
 // Custom Vehicle DivIcon for high visibility without 404 image issues
 const vehicleMarkerIcon = L.divIcon({
@@ -26,6 +31,45 @@ const vehicleMarkerIcon = L.divIcon({
   popupAnchor: [0, -18],
 });
 
+const warehouseMarkerIcon = L.divIcon({
+  className: 'warehouse-transport-marker',
+  html: `
+    <div style="background: linear-gradient(135deg, #047857, #10b981); width: 38px; height: 38px; border-radius: 12px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; cursor: pointer;">
+      🚚
+    </div>
+  `,
+  iconSize: [38, 38],
+  iconAnchor: [19, 19],
+  popupAnchor: [0, -20],
+});
+
+const activeDeliveryMarkerIcon = L.divIcon({
+  className: 'active-delivery-marker',
+  html: `
+    <div style="position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; width: 42px; height: 42px; border-radius: 999px; background: rgba(37, 99, 235, 0.22); animation: pulse 1.6s infinite;"></div>
+      <div style="position: relative; background: linear-gradient(135deg, #1d4ed8, #60a5fa); width: 32px; height: 32px; border-radius: 999px; border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; cursor: pointer;">
+        🚛
+      </div>
+    </div>
+  `,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -20],
+});
+
+const destinationMarkerIcon = L.divIcon({
+  className: 'clicked-destination-marker',
+  html: `
+    <div style="background: linear-gradient(135deg, #dc2626, #f97316); width: 36px; height: 36px; border-radius: 999px 999px 999px 8px; transform: rotate(-45deg); border: 2.5px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <span style="transform: rotate(45deg); color: white; font-size: 16px;">🏠</span>
+    </div>
+  `,
+  iconSize: [36, 36],
+  iconAnchor: [18, 34],
+  popupAnchor: [0, -34],
+});
+
 const NORTH_EAST_INDIA_CENTER = [26.2006, 92.9376];
 const riskColors = {
   low: '#16a34a',
@@ -35,6 +79,10 @@ const riskColors = {
 
 const SOCKET_SERVER_URL =
   import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_STREETS_TILE_URL = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`;
+const FALLBACK_TILE_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 const ANIMATION_DURATION_MS = 900;
 
 const getVehicleKeys = (vehicle = {}) =>
@@ -134,13 +182,13 @@ const animateVehicleMovement = (vehicle, update, onFrame) => {
   return () => cancelAnimationFrame(animationFrameId);
 };
 
-import { useMap } from 'react-leaflet';
-
 const NER_BOUNDS = [
   [21.0, 89.0], // SouthWest
   [29.5, 97.5], // NorthEast
 ];
 const SILCHAR_CENTER = [24.82, 92.8];
+const SILCHAR_RELIEF_WAREHOUSE = [24.8333, 92.7789];
+const BERENGA_BETUKANDI_FLOOD_ZONE = [24.815, 92.795];
 
 // Sub-component to handle map fitBounds
 function MapController({ boundsToFit }) {
@@ -153,6 +201,17 @@ function MapController({ boundsToFit }) {
   return null;
 }
 
+function MapClickHandler({ onDestinationSelect }) {
+  useMapEvents({
+    click(event) {
+      const { lat, lng } = event.latlng;
+      onDestinationSelect([lat, lng]);
+    },
+  });
+
+  return null;
+}
+
 function MapViewer({
   activeVehicles = [],
   routes = [],
@@ -160,8 +219,38 @@ function MapViewer({
   plannerRoute = null,
 }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
+  const [destination, setDestination] = useState(BERENGA_BETUKANDI_FLOOD_ZONE);
+  const [routeCoords, setRouteCoords] = useState([]);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRoute = async () => {
+      try {
+        const coordinates = await fetchRoute(
+          SILCHAR_RELIEF_WAREHOUSE,
+          destination
+        );
+
+        if (isMounted) {
+          setRouteCoords(coordinates);
+        }
+      } catch (error) {
+        console.warn('MapViewer: OSRM route fetch error:', error);
+        if (isMounted) {
+          setRouteCoords([]);
+        }
+      }
+    };
+
+    loadRoute();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [destination]);
 
   useEffect(() => {
     setLiveVehicles((currentVehicles) => {
@@ -289,14 +378,14 @@ function MapViewer({
         if (lat == null || lng == null) {
           const orig = (shipment.origin || '').toLowerCase();
           if (orig.includes('silchar')) {
-            lat = 25.0450;
-            lng = 92.9320;
+            lat = 25.045;
+            lng = 92.932;
           } else if (orig.includes('guwahati')) {
             lat = 25.5788;
             lng = 91.8933;
           } else if (orig.includes('badarpur')) {
-            lat = 24.8920;
-            lng = 92.6840;
+            lat = 24.892;
+            lng = 92.684;
           }
         }
 
@@ -309,7 +398,8 @@ function MapViewer({
           shipment.trackingId ||
           'AS11-EC-2024';
 
-        const cargoType = shipment.cargoType || shipment.title || 'Medical Kits';
+        const cargoType =
+          shipment.cargoType || shipment.title || 'Medical Kits';
         const liveStatus = shipment.status || 'in-transit';
 
         return {
@@ -367,12 +457,13 @@ function MapViewer({
           <Loader label="Loading routes and shipments..." size="lg" />
         </div>
       ) : null}
+      <RouteRisk destination={destination} />
 
       <MapContainer
         center={SILCHAR_CENTER}
         zoom={7}
         minZoom={6}
-        maxZoom={18}
+        maxZoom={20}
         maxBounds={NER_BOUNDS}
         zoomAnimation={true}
         fadeAnimation={true}
@@ -380,10 +471,18 @@ function MapViewer({
         className="h-full min-h-[360px] w-full sm:min-h-[420px]"
       >
         <MapController boundsToFit={plannerRoute?.bounds} />
+        <MapClickHandler onDestinationSelect={setDestination} />
+        <LiveNavigator destination={destination} />
 
         <TileLayer
-          attribution='Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+          attribution={
+            MAPBOX_TOKEN
+              ? '© Mapbox © OpenStreetMap'
+              : 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+          }
+          maxZoom={20}
+          tileSize={256}
+          url={MAPBOX_TOKEN ? MAPBOX_STREETS_TILE_URL : FALLBACK_TILE_URL}
         />
 
         {routes.map((route) => (
@@ -401,12 +500,75 @@ function MapViewer({
           />
         ))}
 
+        {routeCoords.length > 0 && (
+          <Polyline
+            positions={routeCoords}
+            pathOptions={{ color: 'blue', opacity: 0.7, weight: 5 }}
+          >
+            <Popup>
+              <div className="p-1 text-xs">
+                <span className="block font-bold text-blue-700">
+                  Live OSRM Navigation Route
+                </span>
+                <span>
+                  Silchar Relief Warehouse → selected relief destination
+                </span>
+              </div>
+            </Popup>
+          </Polyline>
+        )}
+
+        <Marker position={SILCHAR_RELIEF_WAREHOUSE} icon={warehouseMarkerIcon}>
+          <Popup>
+            <div className="p-1 text-xs">
+              <span className="block font-bold text-emerald-700">
+                🚚 Silchar Relief Warehouse
+              </span>
+              <span>Dispatch origin for emergency supplies.</span>
+            </div>
+          </Popup>
+        </Marker>
+
+        <Marker position={destination} icon={destinationMarkerIcon}>
+          <Popup>
+            <div className="p-1 text-xs">
+              <span className="block font-bold text-orange-700">
+                🏠 Selected Relief Destination
+              </span>
+              <span className="block text-slate-600">
+                Click any home or area on the map to reroute supplies here.
+              </span>
+              <span className="mt-1 block font-mono text-[11px] text-slate-500">
+                {destination[0].toFixed(5)}, {destination[1].toFixed(5)}
+              </span>
+            </div>
+          </Popup>
+        </Marker>
+
+        {routeCoords.length > 0 && (
+          <Marker
+            position={routeCoords[Math.floor(routeCoords.length * 0.35)]}
+            icon={activeDeliveryMarkerIcon}
+          >
+            <Popup>
+              <div className="p-1 text-xs">
+                <span className="block font-bold text-blue-700">
+                  🚛 Active Delivery Vehicle
+                </span>
+                <span>Medical and relief supplies en route to flood zone.</span>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
         {/* Task 4: Alternate Route Polylines (Red = Blocked Corridor, Green = Alternate Safe Route) */}
         {plannerRoute && (
           <>
             {/* Blocked Corridor - Color Red */}
             <Polyline
-              positions={plannerRoute.blockedCoordinates || plannerRoute.coordinates}
+              positions={
+                plannerRoute.blockedCoordinates || plannerRoute.coordinates
+              }
               pathOptions={{
                 color: 'red',
                 weight: 5,
@@ -415,8 +577,13 @@ function MapViewer({
             >
               <Popup>
                 <div className="p-1 text-xs">
-                  <span className="font-bold text-red-600 block">⚠️ Blocked Corridor</span>
-                  <span>{plannerRoute.blockedCorridorName || 'NH-6 Disrupted Stretch (Landslide / Barak Overflow)'}</span>
+                  <span className="font-bold text-red-600 block">
+                    ⚠️ Blocked Corridor
+                  </span>
+                  <span>
+                    {plannerRoute.blockedCorridorName ||
+                      'NH-6 Disrupted Stretch (Landslide / Barak Overflow)'}
+                  </span>
                 </div>
               </Popup>
             </Polyline>
@@ -441,8 +608,13 @@ function MapViewer({
                 </Tooltip>
                 <Popup>
                   <div className="p-1 text-xs">
-                    <span className="font-bold text-green-700 block">✅ Alternate Safe Route</span>
-                    <span className="text-slate-600">Estimated Delay: {plannerRoute.delayEstimate || '+3.5 hrs delay'}</span>
+                    <span className="font-bold text-green-700 block">
+                      ✅ Alternate Safe Route
+                    </span>
+                    <span className="text-slate-600">
+                      Estimated Delay:{' '}
+                      {plannerRoute.delayEstimate || '+3.5 hrs delay'}
+                    </span>
                   </div>
                 </Popup>
               </Polyline>
@@ -486,15 +658,21 @@ function MapViewer({
                 <div className="space-y-1.5 text-xs text-slate-600">
                   <p>
                     <strong className="text-slate-700">Vehicle ID:</strong>{' '}
-                    <span className="font-mono text-slate-900 font-semibold">{vehicle.vehicleId}</span>
+                    <span className="font-mono text-slate-900 font-semibold">
+                      {vehicle.vehicleId}
+                    </span>
                   </p>
                   <p>
                     <strong className="text-slate-700">Cargo Type:</strong>{' '}
-                    <span className="text-slate-900 font-medium">{vehicle.cargoType}</span>
+                    <span className="text-slate-900 font-medium">
+                      {vehicle.cargoType}
+                    </span>
                   </p>
                   <p>
                     <strong className="text-slate-700">Live Status:</strong>{' '}
-                    <span className="font-semibold text-emerald-600">{vehicle.liveStatus}</span>
+                    <span className="font-semibold text-emerald-600">
+                      {vehicle.liveStatus}
+                    </span>
                   </p>
                   {vehicle.driverName && (
                     <p className="text-slate-500 text-[11px]">
@@ -508,7 +686,8 @@ function MapViewer({
                   )}
                   {vehicle.lastUpdatedAt && (
                     <p className="text-[10px] text-slate-400">
-                      Last Update: {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
+                      Last Update:{' '}
+                      {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
                     </p>
                   )}
                 </div>

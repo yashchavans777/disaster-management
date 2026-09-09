@@ -306,3 +306,4 @@ export default function DisasterMap({ children, className = '' }) {
     </div>
   );
 }
+
