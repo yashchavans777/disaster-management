@@ -14,6 +14,7 @@ import L from 'leaflet';
 import apiClient from '../api/apiClient';
 import { fetchRoute } from '../utils/routing';
 
+import LiveNavigator from './LiveNavigator';
 import Loader from './Loader';
 
 // Custom Vehicle DivIcon for high visibility without 404 image issues
@@ -217,9 +218,7 @@ function MapViewer({
   plannerRoute = null,
 }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
-  const [destination, setDestination] = useState(
-    BERENGA_BETUKANDI_FLOOD_ZONE
-  );
+  const [destination, setDestination] = useState(BERENGA_BETUKANDI_FLOOD_ZONE);
   const [routeCoords, setRouteCoords] = useState([]);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
@@ -378,14 +377,14 @@ function MapViewer({
         if (lat == null || lng == null) {
           const orig = (shipment.origin || '').toLowerCase();
           if (orig.includes('silchar')) {
-            lat = 25.0450;
-            lng = 92.9320;
+            lat = 25.045;
+            lng = 92.932;
           } else if (orig.includes('guwahati')) {
             lat = 25.5788;
             lng = 91.8933;
           } else if (orig.includes('badarpur')) {
-            lat = 24.8920;
-            lng = 92.6840;
+            lat = 24.892;
+            lng = 92.684;
           }
         }
 
@@ -398,7 +397,8 @@ function MapViewer({
           shipment.trackingId ||
           'AS11-EC-2024';
 
-        const cargoType = shipment.cargoType || shipment.title || 'Medical Kits';
+        const cargoType =
+          shipment.cargoType || shipment.title || 'Medical Kits';
         const liveStatus = shipment.status || 'in-transit';
 
         return {
@@ -470,6 +470,7 @@ function MapViewer({
       >
         <MapController boundsToFit={plannerRoute?.bounds} />
         <MapClickHandler onDestinationSelect={setDestination} />
+        <LiveNavigator destination={destination} />
 
         <TileLayer
           attribution={
@@ -563,7 +564,9 @@ function MapViewer({
           <>
             {/* Blocked Corridor - Color Red */}
             <Polyline
-              positions={plannerRoute.blockedCoordinates || plannerRoute.coordinates}
+              positions={
+                plannerRoute.blockedCoordinates || plannerRoute.coordinates
+              }
               pathOptions={{
                 color: 'red',
                 weight: 5,
@@ -572,8 +575,13 @@ function MapViewer({
             >
               <Popup>
                 <div className="p-1 text-xs">
-                  <span className="font-bold text-red-600 block">⚠️ Blocked Corridor</span>
-                  <span>{plannerRoute.blockedCorridorName || 'NH-6 Disrupted Stretch (Landslide / Barak Overflow)'}</span>
+                  <span className="font-bold text-red-600 block">
+                    ⚠️ Blocked Corridor
+                  </span>
+                  <span>
+                    {plannerRoute.blockedCorridorName ||
+                      'NH-6 Disrupted Stretch (Landslide / Barak Overflow)'}
+                  </span>
                 </div>
               </Popup>
             </Polyline>
@@ -598,8 +606,13 @@ function MapViewer({
                 </Tooltip>
                 <Popup>
                   <div className="p-1 text-xs">
-                    <span className="font-bold text-green-700 block">✅ Alternate Safe Route</span>
-                    <span className="text-slate-600">Estimated Delay: {plannerRoute.delayEstimate || '+3.5 hrs delay'}</span>
+                    <span className="font-bold text-green-700 block">
+                      ✅ Alternate Safe Route
+                    </span>
+                    <span className="text-slate-600">
+                      Estimated Delay:{' '}
+                      {plannerRoute.delayEstimate || '+3.5 hrs delay'}
+                    </span>
                   </div>
                 </Popup>
               </Polyline>
@@ -643,15 +656,21 @@ function MapViewer({
                 <div className="space-y-1.5 text-xs text-slate-600">
                   <p>
                     <strong className="text-slate-700">Vehicle ID:</strong>{' '}
-                    <span className="font-mono text-slate-900 font-semibold">{vehicle.vehicleId}</span>
+                    <span className="font-mono text-slate-900 font-semibold">
+                      {vehicle.vehicleId}
+                    </span>
                   </p>
                   <p>
                     <strong className="text-slate-700">Cargo Type:</strong>{' '}
-                    <span className="text-slate-900 font-medium">{vehicle.cargoType}</span>
+                    <span className="text-slate-900 font-medium">
+                      {vehicle.cargoType}
+                    </span>
                   </p>
                   <p>
                     <strong className="text-slate-700">Live Status:</strong>{' '}
-                    <span className="font-semibold text-emerald-600">{vehicle.liveStatus}</span>
+                    <span className="font-semibold text-emerald-600">
+                      {vehicle.liveStatus}
+                    </span>
                   </p>
                   {vehicle.driverName && (
                     <p className="text-slate-500 text-[11px]">
@@ -665,7 +684,8 @@ function MapViewer({
                   )}
                   {vehicle.lastUpdatedAt && (
                     <p className="text-[10px] text-slate-400">
-                      Last Update: {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
+                      Last Update:{' '}
+                      {new Date(vehicle.lastUpdatedAt).toLocaleTimeString()}
                     </p>
                   )}
                 </div>
