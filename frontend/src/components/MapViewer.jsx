@@ -201,6 +201,24 @@ function MapController({ boundsToFit }) {
   return null;
 }
 
+function MapSizeController() {
+  const map = useMap();
+
+  useEffect(() => {
+    const invalidateMapSize = () => map.invalidateSize();
+    const resizeTimer = window.setTimeout(invalidateMapSize, 100);
+
+    window.addEventListener('resize', invalidateMapSize);
+
+    return () => {
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener('resize', invalidateMapSize);
+    };
+  }, [map]);
+
+  return null;
+}
+
 function MapClickHandler({ onDestinationSelect }) {
   useMapEvents({
     click(event) {
@@ -451,7 +469,7 @@ function MapViewer({
   }, [shipmentMarkers, visibleVehicles]);
 
   return (
-    <div className="relative flex min-h-[360px] flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-18rem)]">
+    <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:h-[520px] lg:h-[calc(100vh-18rem)] lg:min-h-[560px]">
       {isLoading ? (
         <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/85 backdrop-blur-sm">
           <Loader label="Loading routes and shipments..." size="lg" />
@@ -468,9 +486,11 @@ function MapViewer({
         zoomAnimation={true}
         fadeAnimation={true}
         scrollWheelZoom
-        className="h-full min-h-[360px] w-full sm:min-h-[420px]"
+        className="z-0 h-full w-full"
+        style={{ height: '100%', width: '100%' }}
       >
         <MapController boundsToFit={plannerRoute?.bounds} />
+        <MapSizeController />
         <MapClickHandler onDestinationSelect={setDestination} />
         <LiveNavigator destination={destination} />
 
