@@ -85,10 +85,11 @@ export default defineConfig({
             },
           },
           {
-            // Cache map tiles for offline map support (Esri World Street Map + OSM)
+            // Cache map tiles for offline map support (Mapbox + Esri World Street Map + OSM)
             urlPattern: ({ url }) =>
               url.hostname.endsWith('server.arcgisonline.com') ||
-              url.hostname.endsWith('tile.openstreetmap.org'),
+              url.hostname.endsWith('tile.openstreetmap.org') ||
+              url.hostname.endsWith('api.mapbox.com'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'map-tiles-cache',
