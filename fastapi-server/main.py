@@ -1682,3 +1682,7 @@ def get_city_hazard_zones(city_name: str):
 def get_all_hazard_zones():
     """Returns hazard zones dictionary for all supported cities."""
     return _load_hazard_zones_data()
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))

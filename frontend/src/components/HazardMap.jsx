@@ -269,8 +269,8 @@ export default function HazardMap() {
     setIsLoading(true);
 
     try {
-      // Primary fetch directly from FastAPI endpoint http://localhost:8000/api/hazard-zones/{city_name}
-      const response = await fetch(`http://localhost:8000/api/hazard-zones/${encodeURIComponent(key)}`);
+      const FASTAPI_URL = import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000';
+      const response = await fetch(`${FASTAPI_URL}/api/hazard-zones/${encodeURIComponent(key)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to fetch from FastAPI`);
       }

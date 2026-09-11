@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "start": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "start": "node server.js",
     "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
     "backend": "node server.js",
     "frontend": "npm --prefix frontend run dev",

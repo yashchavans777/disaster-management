@@ -71,8 +71,8 @@ export default function Chatbot({ isOpen = true, onClose }) {
       const requestPayload = { question: textToSend, query: textToSend };
 
       try {
-        console.log('Attempting direct connection to http://127.0.0.1:8000/rag-query...');
-        response = await fetch('http://127.0.0.1:8000/rag-query', {
+        const FASTAPI_URL = import.meta.env.VITE_FASTAPI_URL || 'http://127.0.0.1:8000';
+        response = await fetch(`${FASTAPI_URL}/rag-query`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
