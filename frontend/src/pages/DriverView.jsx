@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
 const SOCKET_SERVER_URL =
-  import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
+  import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL;
 
 const SUPPORTED_LANGUAGES = [
   { code: 'hi-IN', label: 'हिंदी', flag: '🇮🇳' },
@@ -127,7 +127,7 @@ function DriverView() {
   const { speak, stop, isSpeaking, isSupported } = useVoiceAlert(preferredLang);
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL, {
       transports: ['websocket', 'polling'],
       withCredentials: true,
     });

@@ -78,7 +78,7 @@ const riskColors = {
 };
 
 const SOCKET_SERVER_URL =
-  import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055';
+  import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL;
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const MAPBOX_STREETS_TILE_URL = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`;
 const FALLBACK_TILE_URL =
@@ -299,7 +299,7 @@ function MapViewer({
 
   useEffect(() => {
     // Initialize socket with polling fallback and capped reconnection
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL, {
       transports: ['websocket', 'polling'],
       withCredentials: true,
       reconnectionAttempts: 5,

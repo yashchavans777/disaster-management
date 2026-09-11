@@ -431,7 +431,7 @@ function Dashboard() {
   }, [fetchShipments]);
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL, {
       transports: ['websocket', 'polling'],
       withCredentials: true,
     });
