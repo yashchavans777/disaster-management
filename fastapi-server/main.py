@@ -6,9 +6,23 @@ import json
 import math
 import os
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any, Optional
+
+# ── Console encoding guard ───────────────────────────────────────────────────
+# Windows redirects (Docker logs, CI, Start-Process redirection) fall back to a
+# cp1252 codepage where characters like ↳ ─ ═ crash every print() with
+# UnicodeEncodeError. Force UTF-8 (with replacement) so diagnostics can never
+# kill the server.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 
 try:
     from groq import Groq
@@ -50,6 +64,67 @@ if HAS_GROQ and GROQ_API_KEY:
 
 NODE_API_URL = os.getenv("NODE_API_URL", "http://localhost:5055/api")
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+# ══════════════════════════════════════════════════════════════════════════════
+# ── STARTUP ENV DIAGNOSTICS (surfaced loudly in the uvicorn console) ──────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _mask_secret(value: str) -> str:
+    """Never print a full secret; show only its last 4 characters."""
+    return f"****{value[-4:]}" if value else "(not set)"
+
+
+def _log_key_startup_diagnostics() -> None:
+    """Verify critical env vars exist at startup instead of failing silently later."""
+    openweather_key = (os.getenv("OPENWEATHER_API_KEY") or "").strip()
+    if not openweather_key:
+        print("=" * 100)
+        print("[CRITICAL][Startup] OPENWEATHER_API_KEY is MISSING/EMPTY in environment!")
+        print(
+            "  > Live OpenWeatherMap data is DISABLED — /predict-risk will answer "
+            "MODERATE with no weather context."
+        )
+        print(
+            "  > Fix: add OPENWEATHER_API_KEY=<your_key> to <project-root>/.env "
+            "(free key: openweathermap.org), then restart uvicorn."
+        )
+        print("=" * 100)
+    elif openweather_key.lower().startswith("your_") or openweather_key.lower().endswith("_here"):
+        print("=" * 100)
+        print(
+            f"[CRITICAL][Startup] OPENWEATHER_API_KEY is still the PLACEHOLDER value "
+            f"({_mask_secret(openweather_key)})."
+        )
+        print(
+            "  ↳ Replace it with a real key from openweathermap.org in <project-root>/.env, "
+            "then restart uvicorn."
+        )
+        print("=" * 100)
+    else:
+        print(
+            f"[Startup] OPENWEATHER_API_KEY configured ({_mask_secret(openweather_key)}) "
+            "— live weather ENABLED."
+        )
+
+    if not GROQ_API_KEY:
+        print(
+            "[WARNING][Startup] GROQ_API_KEY missing — predictive LLM disabled; "
+            "deterministic fallback will be used."
+        )
+    elif GROQ_API_KEY.lower().startswith("your_") or GROQ_API_KEY.lower().endswith("_here"):
+        print(
+            f"[CRITICAL][Startup] GROQ_API_KEY is still the PLACEHOLDER value "
+            f"({_mask_secret(GROQ_API_KEY)}) — replace it with a real key from "
+            "console.groq.com in <project-root>/.env, then restart uvicorn."
+        )
+    else:
+        print(
+            f"[Startup] GROQ_API_KEY configured ({_mask_secret(GROQ_API_KEY)}) "
+            "— predictive LLM ENABLED."
+        )
+
+
+_log_key_startup_diagnostics()
+
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -187,14 +262,102 @@ def _compute_risk_score(weather: dict, hist_bias: float = 0.0) -> tuple[float, s
     return round(score, 4), level
 
 
+_CONDITION_TO_WMO_CODE = {
+    "clear": 0,
+    "clouds": 2,
+    "drizzle": 53,
+    "rain": 63,
+    "snow": 73,
+    "thunderstorm": 95,
+    "mist": 45,
+    "fog": 45,
+    "haze": 45,
+    "smoke": 45,
+    "dust": 45,
+    "sand": 45,
+    "ash": 45,
+    "squall": 82,
+    "tornado": 99,
+}
+
+# WMO weather interpretation codes (Open-Meteo `current_weather.weathercode`)
+_WMO_CONDITIONS = {
+    0: "Clear",
+    1: "Mostly Clear",
+    2: "Partly Cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Rime Fog",
+    51: "Light Drizzle",
+    53: "Drizzle",
+    55: "Heavy Drizzle",
+    61: "Light Rain",
+    63: "Rain",
+    65: "Heavy Rain",
+    66: "Freezing Rain",
+    67: "Heavy Freezing Rain",
+    71: "Light Snow",
+    73: "Snow",
+    75: "Heavy Snow",
+    77: "Snow Grains",
+    80: "Rain Showers",
+    81: "Heavy Rain Showers",
+    82: "Violent Rain Showers",
+    85: "Snow Showers",
+    86: "Heavy Snow Showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with Hail",
+    99: "Heavy Thunderstorm with Hail",
+}
+
+
 def _normalize_openweather_for_model(weather: dict) -> dict:
     """Convert OpenWeatherMap fields into the existing numerical model field names."""
+    condition = str(weather.get("weather_condition") or "").strip().lower()
+    estimated_code = _CONDITION_TO_WMO_CODE.get(condition, 3 if condition else 0)
     return {
         "temperature": weather.get("current_temp") or 25,
         "relativehumidity_2m": weather.get("humidity") or 60,
         "precipitation": weather.get("rainfall_1h") or 0,
         "rain": weather.get("rainfall_1h") or 0,
         "windspeed": weather.get("wind_speed") or 0,
+        "weathercode": estimated_code,
+    }
+
+
+def _normalize_client_weather(weather: Optional[dict]) -> dict[str, Any]:
+    """
+    Normalize third-party weather payloads (e.g. the Node.js proxy's Open-Meteo
+    `current_weather`) into the OpenWeatherMap-shaped dict used by the prompt.
+
+    Fixes the silent 'Live weather unavailable' bug: the Node proxy passes
+    `{temperature, windspeed, weathercode, ...}` WITHOUT an `available` flag,
+    which previously shadowed the server-side OpenWeatherMap fetch entirely
+    (`req.weather or await get_live_weather(...)` — truthy dict wins).
+    """
+    if not isinstance(weather, dict) or not weather:
+        return {}
+
+    current_temp = weather.get("current_temp", weather.get("temperature"))
+    if current_temp is None:
+        return {}
+
+    code = weather.get("weathercode")
+    condition = (
+        weather.get("weather_condition")
+        or (_WMO_CONDITIONS.get(code) if code is not None else None)
+        or "Unknown"
+    )
+
+    return {
+        "source": weather.get("source") or "open-meteo (Node proxy)",
+        "available": True,
+        "current_temp": current_temp,
+        "humidity": weather.get("humidity", weather.get("relative_humidity_2m")),
+        "weather_condition": condition,
+        "rainfall_1h": weather.get("rainfall_1h", weather.get("rain") or 0),
+        "wind_speed": weather.get("wind_speed", weather.get("windspeed")),
+        "location_name": weather.get("location_name"),
     }
 
 
@@ -203,12 +366,17 @@ def _format_live_weather(weather: dict) -> str:
     if not weather.get("available"):
         return f"Live weather unavailable ({weather.get('error', 'unknown error')})."
 
+    humidity = weather.get("humidity")
+    humidity_text = f"{humidity}%" if humidity is not None else "n/a"
+    wind = weather.get("wind_speed")
+    wind_text = f"{wind} m/s" if wind is not None else "n/a"
+
     return (
         f"Temperature: {weather.get('current_temp')}°C; "
-        f"Humidity / soil-moisture proxy: {weather.get('humidity')}%; "
+        f"Humidity / soil-moisture proxy: {humidity_text}; "
         f"Condition: {weather.get('weather_condition')}; "
         f"Rainfall last 1 hour: {weather.get('rainfall_1h', 0)} mm; "
-        f"Wind speed: {weather.get('wind_speed', 'n/a')} m/s; "
+        f"Wind speed: {wind_text}; "
         f"Nearest station/name: {weather.get('location_name') or 'unknown'}."
     )
 
@@ -290,6 +458,23 @@ async def _call_predictive_llm(system_prompt: str) -> dict[str, str]:
 
 def _fallback_predictive_response(weather: dict, historical_context: str, historical_bias: float = 0.7) -> dict[str, Any]:
     """Deterministic fallback when LLM/API keys are unavailable."""
+    if weather.get("available"):
+        print(
+            "[Fallback] LLM unavailable — deterministic weather+RAG scoring WITH live weather data "
+            f"({weather.get('source')}, {weather.get('weather_condition')})."
+        )
+    else:
+        print("[Fallback][WARNING] " + "=" * 60)
+        print(
+            "[Fallback][WARNING] LLM unavailable AND live weather UNAVAILABLE — "
+            "scoring with DEFAULTS (temp=25°C, humidity=60%)."
+        )
+        print(f"[Fallback][WARNING] Weather error was: {weather.get('error', 'unknown')}")
+        print(
+            "[Fallback][WARNING] Fix the [Weather] errors above to restore accurate live scoring."
+        )
+        print("[Fallback][WARNING] " + "=" * 60)
+
     normalized_weather = _normalize_openweather_for_model(weather)
     score, level = _compute_risk_score(normalized_weather, historical_bias)
 
@@ -306,11 +491,21 @@ def _fallback_predictive_response(weather: dict, historical_context: str, histor
         score = max(score, 0.45)
 
     level_upper = level.upper()
-    justification = (
-        f"The current live weather shows {weather.get('weather_condition', 'unknown conditions')} with "
-        f"{rainfall} mm rainfall in the last hour and {humidity}% humidity, which increases flood/landslide sensitivity. "
-        "Historical Silchar/Barak Valley records identify repeated flooding, embankment breach, and corridor disruption patterns, so response teams should monitor vulnerable low-lying and slope-adjacent routes."
-    )
+    if weather.get("available"):
+        justification = (
+            f"The current live weather shows {weather.get('weather_condition', 'unknown conditions')} with "
+            f"{rainfall} mm rainfall in the last hour and {humidity}% humidity, which increases flood/landslide sensitivity. "
+            "Historical Silchar/Barak Valley records identify repeated flooding, embankment breach, and corridor disruption patterns, so response teams should monitor vulnerable low-lying and slope-adjacent routes."
+        )
+    else:
+        justification = (
+            "Live weather data is currently unavailable "
+            f"({weather.get('error', 'OpenWeatherMap fetch failed — see server console')}), "
+            "so this assessment relies on historical Silchar/Barak Valley vulnerability records only. "
+            "Historical records identify repeated flooding, embankment breach, and corridor disruption patterns, "
+            "so response teams should monitor vulnerable low-lying and slope-adjacent routes. "
+            "Restore OPENWEATHER_API_KEY in .env to re-enable live meteorological input."
+        )
     return {"risk_level": level_upper, "justification": justification, "risk_score": round(score, 4)}
 
 
@@ -520,7 +715,27 @@ async def predict_risk(req: PredictRiskRequest):
     Combines live OpenWeatherMap data with Silchar historical RAG context and
     Groq/Qwen prompt engineering to predict flood/landslide risk.
     """
-    live_weather = req.weather or await get_live_weather(req.lat, req.lng)
+    # ── Weather resolution ────────────────────────────────────────────────────
+    # Prefer client-injected weather ONLY when it carries real metrics.
+    # Fixes the shadow bug: the Node.js proxy passes Open-Meteo payloads without
+    # an `available` flag, which previously made this endpoint skip the live
+    # OpenWeatherMap fetch entirely and report 'Live weather unavailable'.
+    client_weather = _normalize_client_weather(req.weather)
+    if client_weather:
+        live_weather = client_weather
+        print(
+            f"[predict-risk] Using client-injected weather payload "
+            f"(source: {live_weather.get('source')}, temp: {live_weather.get('current_temp')}°C, "
+            f"condition: {live_weather.get('weather_condition')})."
+        )
+    else:
+        if req.weather:
+            print(
+                "[predict-risk] Client weather payload had NO usable metrics — "
+                "fetching fresh OpenWeatherMap data server-side."
+            )
+        live_weather = await get_live_weather(req.lat, req.lng)
+
     raw_history = _load_silchar_history()
     historical_context = _retrieve_top_chunks(
         raw_history,
@@ -531,13 +746,38 @@ async def predict_risk(req: PredictRiskRequest):
     live_weather_text = _format_live_weather(live_weather)
     system_prompt = _build_predictive_prompt(historical_context, live_weather_text)
 
+    # ── DEBUG: verify live weather data actually reached the LLM prompt ──────
+    weather_available = bool(live_weather.get("available"))
+    weather_in_prompt = live_weather_text in system_prompt
+    print("-" * 100)
+    print(
+        f"[predict-risk] coords=({req.lat}, {req.lng}) | "
+        f"weather_available={weather_available} | source={live_weather.get('source')}"
+    )
+    print(f"[predict-risk] live_weather_text -> {live_weather_text}")
+    print(
+        f"[predict-risk] weather string present in final prompt: {weather_in_prompt} "
+        f"| prompt length: {len(system_prompt)} chars"
+    )
+    print("[predict-risk] FINAL LLM PROMPT:")
+    print(system_prompt)
+    print("-" * 100)
+    if not weather_available:
+        print(
+            "[WARNING][predict-risk] NO live weather data in the prompt — the engine will "
+            "default to MODERATE. Fix the [Weather] errors logged above."
+        )
+
     prediction_source = "groq-qwen-live-weather-rag"
     risk_score = None
 
     try:
         prediction = await _call_predictive_llm(system_prompt)
     except Exception as exc:
-        print(f"Predictive LLM fallback activated: {exc}")
+        print(
+            f"[predict-risk][WARNING] LLM call failed ({exc}) — deterministic fallback engaged "
+            f"(weather_available={weather_available})."
+        )
         prediction = _fallback_predictive_response(
             live_weather,
             historical_context,

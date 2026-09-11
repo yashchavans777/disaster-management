@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  AlertOctagon,
   AlertTriangle,
   Brain,
   Check,
   ChevronDown,
   Globe,
   Languages,
-  PlusCircle,
   Radio,
   Shield,
   Wifi,
   WifiOff,
 } from 'lucide-react';
+import { useIncidentModal } from '../context/IncidentModalContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar({ onOpenIncidentModal, onEvaluateRisks, isEvaluating = false }) {
   const { selectedLanguage, setSelectedLanguage, languages, t } = useLanguage();
+  const { openReportModal } = useIncidentModal();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const dropdownRef = useRef(null);
@@ -99,18 +101,17 @@ export default function Navbar({ onOpenIncidentModal, onEvaluateRisks, isEvaluat
             </button>
           )}
 
-          {/* Key UI Button 2: Report Incident (Wrapped in translation context) */}
-          {onOpenIncidentModal && (
-            <button
-              type="button"
-              onClick={onOpenIncidentModal}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition"
-              title="Report road incident or hazard"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span>{t('Report Incident')}</span>
-            </button>
-          )}
+          {/* Key UI Button 2: Report Incident — always-visible emergency action.
+              Uses the global IncidentModalContext so it works from every page. */}
+          <button
+            type="button"
+            onClick={onOpenIncidentModal || openReportModal}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm ring-1 ring-rose-700/20 transition focus:outline-none focus:ring-4 focus:ring-rose-200"
+            title="Report road incident or hazard"
+          >
+            <AlertOctagon className="h-3.5 w-3.5" />
+            <span>{t('Report Incident')}</span>
+          </button>
 
           {/* Sleek Tailwind CSS Language Switcher Dropdown Menu */}
           <div className="relative" ref={dropdownRef}>

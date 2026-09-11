@@ -8,7 +8,9 @@ import DriverView from './pages/DriverView';
 import Login from './pages/Login';
 import HazardMap from './components/HazardMap';
 import Navbar from './components/Navbar';
+import ReportIncidentModal from './components/ReportIncidentModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { IncidentModalProvider, useIncidentModal } from './context/IncidentModalContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 function NavigationSidebar() {
@@ -207,7 +209,31 @@ function AppContent() {
           </div>
         </main>
       </div>
+
+      {/* Global Report Incident modal host — reachable from ANY page via the
+          Navbar button / Dashboard FAB through IncidentModalContext. */}
+      <GlobalReportIncidentModal />
     </div>
+  );
+}
+
+// The Report Incident modal is wired to the global context so submission
+// (including the offline queue) works everywhere, not only on the Dashboard.
+function GlobalReportIncidentModal() {
+  const {
+    isReportModalOpen,
+    isSubmittingIncident,
+    closeReportModal,
+    submitIncident,
+  } = useIncidentModal();
+
+  return (
+    <ReportIncidentModal
+      isOpen={isReportModalOpen}
+      isSubmitting={isSubmittingIncident}
+      onClose={closeReportModal}
+      onSubmit={submitIncident}
+    />
   );
 }
 
@@ -250,7 +276,9 @@ function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
-        <AppContent />
+        <IncidentModalProvider>
+          <AppContent />
+        </IncidentModalProvider>
       </LanguageProvider>
     </AuthProvider>
   );
