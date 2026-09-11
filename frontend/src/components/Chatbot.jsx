@@ -208,29 +208,34 @@ export default function Chatbot({ isOpen = true, onClose }) {
 
   if (!isOpen) return null;
 
-  // Container styling classes depending on isFullscreen and isDarkMode
+  // Container styling classes depending on isFullscreen and isDarkMode.
+  // Floating widget mode: anchored bottom-right, hard-capped at 85vh, flex
+  // column with hidden outer overflow — so the header can never be pushed
+  // off-screen when the messages area grows (only the inner body scrolls).
   const containerClasses = isFullscreen
-    ? `fixed inset-0 z-[9999] flex h-full w-full flex-col m-0 rounded-none shadow-2xl transition-all duration-200 ${
+    ? `fixed inset-0 z-[9999] flex h-full w-full flex-col m-0 overflow-hidden rounded-none shadow-2xl transition-all duration-200 ${
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-slate-900'
       }`
-    : `fixed inset-y-0 right-0 z-[900] flex w-full max-w-sm sm:max-w-md flex-col border-l shadow-2xl transition-all duration-200 ${
+    : `fixed bottom-4 right-4 top-auto z-[1050] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 sm:max-w-md ${
         isDarkMode
           ? 'border-gray-800 bg-gray-900 text-white'
           : 'border-slate-200 bg-white text-slate-900'
       }`;
 
-  // Header background
+  // Header background — shrink-0 keeps the header pinned at the top of the
+  // flex column; the flex container can never squish or push it out of view.
   const headerClasses = isDarkMode
-    ? 'flex items-center justify-between border-b border-gray-800 bg-gray-950 px-4 py-3 text-white'
-    : 'flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white';
+    ? 'flex shrink-0 items-center justify-between border-b border-gray-800 bg-gray-950 px-4 py-3 text-white'
+    : 'flex shrink-0 items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white';
 
-  // Body container
-  const bodyClasses = `flex-1 overflow-y-auto px-4 py-4 ${
+  // Body container — flex-1 + min-h-0 (flexbox min-size safety) + vertical
+  // scroll: the messages area takes the remaining space and scrolls inside.
+  const bodyClasses = `min-h-0 flex-1 overflow-y-auto px-4 py-4 ${
     isDarkMode ? 'bg-gray-900' : 'bg-slate-50'
   }`;
 
-  // Footer / form container
-  const footerClasses = `border-t px-4 py-3 ${
+  // Footer / form container — shrink-0 keeps the input row fixed at the bottom.
+  const footerClasses = `shrink-0 border-t px-4 py-3 ${
     isDarkMode
       ? 'border-gray-800 bg-gray-950'
       : 'border-slate-200 bg-white'
