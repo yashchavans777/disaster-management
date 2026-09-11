@@ -1643,6 +1643,29 @@ def _load_hazard_zones_data() -> dict:
             print(f"Error reading hazard_zones.json: {e}")
     return {}
 
+@app.get("/api/weather/{city}")
+async def get_city_weather(city: str):
+    from fastapi.responses import JSONResponse
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return JSONResponse(status_code=500, content={"error": "OPENWEATHER_API_KEY is missing."})
+    
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        return JSONResponse(
+            status_code=exc.response.status_code, 
+            content={"error": f"OpenWeatherMap returned HTTP {exc.response.status_code}"}
+        )
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500, 
+            content={"error": f"Weather fetch failed: {str(exc)}"}
+        )
 
 @app.get("/api/hazard-zones/{city_name}")
 def get_city_hazard_zones(city_name: str):
