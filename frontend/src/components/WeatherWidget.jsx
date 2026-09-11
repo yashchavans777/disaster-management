@@ -62,31 +62,61 @@ function WeatherWidget() {
     );
   }
 
-  const { current, forecast, rain_expected_in_next_48h } = weatherData;
+  // Fallback if weatherData is somehow undefined or missing main data
+  if (!weatherData || !weatherData.main) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <p className="text-sm font-medium text-amber-600">
+          Weather data is currently unavailable or malformed.
+        </p>
+      </div>
+    );
+  }
+
+  // Safely extract OpenWeatherMap fields using optional chaining
+  const temperature = weatherData?.main?.temp;
+  const condition = weatherData?.weather?.[0]?.main || 'Unknown';
+  const description = weatherData?.weather?.[0]?.description || 'No description';
+  const cityName = weatherData?.name || 'Silchar';
+
+  const getEmoji = (cond) => {
+    switch (cond?.toLowerCase()) {
+      case 'clear': return '☀️';
+      case 'clouds': return '☁️';
+      case 'rain':
+      case 'drizzle': return '🌧️';
+      case 'thunderstorm': return '⛈️';
+      case 'snow': return '❄️';
+      default: return '🌤️';
+    }
+  };
+
+  const emoji = getEmoji(condition);
+  const isRaining = ['rain', 'drizzle', 'thunderstorm'].includes(condition?.toLowerCase());
 
   return (
     <div className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {/* Current Weather */}
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Silchar, Assam</h2>
+          <h2 className="text-lg font-bold text-slate-900">{cityName}, Assam</h2>
           <p className="text-sm font-medium text-slate-500">
-            Live Weather & 2-Day Forecast
+            Live Weather
           </p>
 
           <div className="mt-4 flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
-              {current.emoji}
+              {emoji}
             </div>
             <div>
               <div className="flex items-center gap-1">
                 <Thermometer className="h-5 w-5 text-slate-400" />
                 <span className="text-3xl font-black text-slate-800">
-                  {current.temperature_c}°C
+                  {temperature ? Math.round(temperature) : '--'}°C
                 </span>
               </div>
-              <p className="text-sm font-medium text-slate-600">
-                {current.condition}
+              <p className="text-sm font-medium text-slate-600 capitalize">
+                {description}
               </p>
             </div>
           </div>
@@ -95,11 +125,10 @@ function WeatherWidget() {
         {/* Forecast & Alert */}
         <div className="flex flex-col items-end gap-3 md:min-w-[280px]">
           {/* Status Badge */}
-          {rain_expected_in_next_48h ? (
+          {isRaining ? (
             <div className="inline-flex animate-pulse items-center gap-2 rounded-lg border border-red-500 bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm ring-2 ring-red-500/20">
               <AlertTriangle className="h-4 w-4" />
-              ⚠️ HIGH ALERT: Rain Expected in Next 48 Hours - Flood Risk
-              Elevated
+              ⚠️ HIGH ALERT: Rain Expected - Flood Risk Elevated
             </div>
           ) : (
             <div className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-bold text-green-700 shadow-sm">
@@ -108,30 +137,7 @@ function WeatherWidget() {
             </div>
           )}
 
-          {/* 2-Day Forecast Cards */}
-          <div className="mt-2 flex w-full gap-3">
-            {forecast?.slice(0, 2).map((day, idx) => (
-              <div
-                key={idx}
-                className="flex flex-1 flex-col items-center rounded-xl border border-slate-100 bg-slate-50 p-3"
-              >
-                <p className="text-xs font-semibold text-slate-500 uppercase">
-                  {day.day_label}
-                </p>
-                <span className="my-1 text-2xl">{day.emoji}</span>
-                <p
-                  className="text-[10px] font-medium text-slate-600 text-center leading-tight line-clamp-1"
-                  title={day.condition}
-                >
-                  {day.condition}
-                </p>
-                <div className="mt-1 flex items-center gap-1 text-xs font-bold text-blue-600">
-                  <CloudRain className="h-3 w-3" />
-                  {day.precipitation_probability}%
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Forecast section gracefully omitted for OpenWeatherMap free tier compatibility */}
         </div>
       </div>
     </div>
