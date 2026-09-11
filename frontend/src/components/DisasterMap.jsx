@@ -153,9 +153,9 @@ export default function DisasterMap({ children, className = '' }) {
   };
 
   return (
-    <div className={`relative h-[600px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>
-      {/* Floating Tailwind CSS Route Planner UI Card */}
-      <div className="absolute top-4 right-4 z-[1000] w-80 rounded-xl bg-white p-4 shadow-lg border border-slate-200">
+    <div className={`flex flex-col gap-4 w-full ${className}`}>
+      {/* Tailwind CSS Route Planner UI Card */}
+      <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-sm border border-slate-200">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <Navigation className="h-4 w-4 text-indigo-600" />
@@ -256,8 +256,9 @@ export default function DisasterMap({ children, className = '' }) {
         </form>
       </div>
 
-      {/* Leaflet MapContainer */}
-      <MapContainer
+      {/* Leaflet Map Container */}
+      <div className="relative h-[600px] min-h-[600px] lg:min-h-[70vh] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <MapContainer
         center={DEFAULT_CENTER}
         zoom={7}
         minZoom={6}
@@ -303,6 +304,7 @@ export default function DisasterMap({ children, className = '' }) {
 
         {children}
       </MapContainer>
+      </div>
     </div>
   );
 }

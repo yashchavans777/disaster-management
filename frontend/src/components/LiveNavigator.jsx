@@ -233,6 +233,136 @@ function LiveNavigator({ destination }) {
     return `${(speed * 3.6).toFixed(1)} km/h`;
   }, [speed]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('live_navigator_state_change', {
+          detail: {
+            isNavigating,
+            currentLocation,
+            navigationRoute,
+            speedLabel,
+          },
+        })
+      );
+    }
+  }, [currentLocation, isNavigating, navigationRoute, speedLabel]);
+
+  return (
+    <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      {isNavigating ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live GPS Active
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Auto-centering at zoom 18 for field navigation.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                stopNavigation();
+              }}
+              className="rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-red-700"
+            >
+              Stop
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-xl bg-slate-100 p-2">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Distance Remaining
+              </span>
+              <span className="mt-0.5 block text-lg font-black text-slate-900">
+                {formatDistance(distanceRemaining)}
+              </span>
+            </div>
+            <div className="rounded-xl bg-slate-100 p-2">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Speed
+              </span>
+              <span className="mt-0.5 block text-lg font-black text-slate-900">
+                {speedLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500">
+            {isRouteRefreshing
+              ? 'Refreshing best route...'
+              : 'Route refreshes every 10 seconds or after 50 m movement.'}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">
+              Live Navigator Mode
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Click a destination on the map, then start GPS tracking for 2-wheeler
+              navigation.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              startNavigation();
+            }}
+            className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            disabled={!canUseGeolocation}
+          >
+            Start Navigation
+          </button>
+        </div>
+      )}
+
+      {locationError && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+          {locationError}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function LiveNavigatorMapOverlay({ liveNavigation }) {
+  const [navState, setNavState] = useState(
+    liveNavigation || {
+      isNavigating: false,
+      currentLocation: null,
+      navigationRoute: [],
+      speedLabel: '',
+    }
+  );
+
+  useEffect(() => {
+    if (liveNavigation) {
+      setNavState(liveNavigation);
+    }
+  }, [liveNavigation]);
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e?.detail) {
+        setNavState(e.detail);
+      }
+    };
+    window.addEventListener('live_navigator_state_change', handleUpdate);
+    return () => {
+      window.removeEventListener('live_navigator_state_change', handleUpdate);
+    };
+  }, []);
+
+  const { isNavigating, currentLocation, navigationRoute, speedLabel } = navState;
+
   return (
     <>
       <NavigationAutoCenter
@@ -240,7 +370,7 @@ function LiveNavigator({ destination }) {
         isNavigating={isNavigating}
       />
 
-      {navigationRoute.length > 0 && (
+      {navigationRoute?.length > 0 && (
         <Polyline
           positions={navigationRoute}
           pathOptions={{ color: '#0ea5e9', opacity: 0.9, weight: 7 }}
@@ -271,90 +401,6 @@ function LiveNavigator({ destination }) {
           </Popup>
         </Marker>
       )}
-
-      <div className="pointer-events-none absolute inset-x-3 bottom-4 z-[1000] flex justify-center sm:inset-x-auto sm:right-4 sm:top-4 sm:bottom-auto sm:block">
-        <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur-md sm:w-80">
-          {isNavigating ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Live GPS Active
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Auto-centering at zoom 18 for field navigation.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    stopNavigation();
-                  }}
-                  className="rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-red-700"
-                >
-                  Stop
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl bg-slate-100 p-2">
-                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Distance Remaining
-                  </span>
-                  <span className="mt-0.5 block text-lg font-black text-slate-900">
-                    {formatDistance(distanceRemaining)}
-                  </span>
-                </div>
-                <div className="rounded-xl bg-slate-100 p-2">
-                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    Speed
-                  </span>
-                  <span className="mt-0.5 block text-lg font-black text-slate-900">
-                    {speedLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-[11px] text-slate-500">
-                {isRouteRefreshing
-                  ? 'Refreshing best route...'
-                  : 'Route refreshes every 10 seconds or after 50 m movement.'}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Live Navigator Mode
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Click a destination, then start GPS tracking for 2-wheeler
-                  navigation.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  startNavigation();
-                }}
-                className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                disabled={!canUseGeolocation}
-              >
-                Start Navigation
-              </button>
-            </div>
-          )}
-
-          {locationError && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-              {locationError}
-            </div>
-          )}
-        </div>
-      </div>
     </>
   );
 }

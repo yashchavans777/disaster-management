@@ -173,7 +173,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
   };
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] w-80 rounded-xl bg-white p-4 shadow-lg border border-slate-200">
+    <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
           <Navigation className="h-4 w-4 text-indigo-600" />

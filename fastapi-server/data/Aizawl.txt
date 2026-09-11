@@ -59,7 +59,7 @@ DISTRICT DISASTER & SMART LOGISTICS PROFILE: AIZAWL CITY, MIZORAM
   - Route: Silchar (Assam) -> Kolasib -> Aizawl.
   - Supply Share: Carries over 85% of Mizoram's daily essential commodities.
   - Chokepoints: Landslides at Vairengte or Lailapur completely freeze inbound supply chains.
-
+  
 * Secondary / Alternative Routes:
   - NH-208 / Bairabi Route: Hailakandi (Assam) -> Bairabi -> Mamit -> Aizawl (Activated during NH-306 closures).
 

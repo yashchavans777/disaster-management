@@ -14,7 +14,7 @@ import L from 'leaflet';
 import apiClient from '../api/apiClient';
 import { fetchRoute } from '../utils/routing';
 
-import LiveNavigator from './LiveNavigator';
+import { LiveNavigatorMapOverlay } from './LiveNavigator';
 import Loader from './Loader';
 import RouteRisk from './RouteRisk';
 
@@ -217,9 +217,20 @@ function MapViewer({
   routes = [],
   isLoading = false,
   plannerRoute = null,
+  destination: propDestination,
+  onDestinationSelect,
 }) {
   const [liveVehicles, setLiveVehicles] = useState(activeVehicles);
-  const [destination, setDestination] = useState(BERENGA_BETUKANDI_FLOOD_ZONE);
+  const [internalDestination, setInternalDestination] = useState(
+    BERENGA_BETUKANDI_FLOOD_ZONE
+  );
+  const destination = propDestination || internalDestination;
+  const setDestination = (coords) => {
+    setInternalDestination(coords);
+    if (onDestinationSelect) {
+      onDestinationSelect(coords);
+    }
+  };
   const [routeCoords, setRouteCoords] = useState([]);
   const animationsRef = useRef(new Map());
   const liveVehiclesRef = useRef(activeVehicles);
@@ -270,8 +281,9 @@ function MapViewer({
 
   useEffect(() => {
     // Initialize socket with polling fallback and capped reconnection
-    const socket = io(SOCKET_SERVER_URL, {
-      transports: ['polling', 'websocket'],
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 3000,
       timeout: 4000,
@@ -451,7 +463,7 @@ function MapViewer({
   }, [shipmentMarkers, visibleVehicles]);
 
   return (
-    <div className="relative flex min-h-[360px] flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-18rem)]">
+    <div className="relative flex h-[600px] min-h-[600px] lg:min-h-[70vh] flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {isLoading ? (
         <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/85 backdrop-blur-sm">
           <Loader label="Loading routes and shipments..." size="lg" />
@@ -468,11 +480,11 @@ function MapViewer({
         zoomAnimation={true}
         fadeAnimation={true}
         scrollWheelZoom
-        className="h-full min-h-[360px] w-full sm:min-h-[420px]"
+        className="h-full min-h-[600px] w-full"
       >
         <MapController boundsToFit={plannerRoute?.bounds} />
         <MapClickHandler onDestinationSelect={setDestination} />
-        <LiveNavigator destination={destination} />
+        <LiveNavigatorMapOverlay />
 
         <TileLayer
           attribution={

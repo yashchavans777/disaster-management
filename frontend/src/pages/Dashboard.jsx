@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { io } from 'socket.io-client';
 import {
   Bar,
   BarChart,
@@ -16,6 +17,7 @@ import apiClient from '../api/apiClient';
 import { getApiErrorMessage } from '../api/apiError';
 import Loader from '../components/Loader';
 import MapViewer from '../components/MapViewer';
+import LiveNavigator from '../components/LiveNavigator';
 import ReportIncidentModal from '../components/ReportIncidentModal';
 import WeatherWidget from '../components/WeatherWidget';
 import RoutePlanner from '../components/RoutePlanner';
@@ -359,6 +361,7 @@ function Dashboard() {
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
   const [plannerRoute, setPlannerRoute] = useState(null);
   const [selectedCity, setSelectedCity] = useState('Silchar, Assam');
+  const [destination, setDestination] = useState([24.815, 92.795]);
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -430,6 +433,21 @@ function Dashboard() {
 
   useEffect(() => {
     fetchShipments();
+  }, [fetchShipments]);
+
+  useEffect(() => {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+    });
+
+    socket.on('route_hazard_alert', () => {
+      fetchShipments();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [fetchShipments]);
 
   useEffect(() => {
@@ -715,10 +733,14 @@ function Dashboard() {
           </div>
         ) : null}
 
-        <div className="relative flex flex-1 flex-col">
+        <div className="flex flex-col md:flex-row gap-4 mb-4 items-start w-full">
           <RoutePlanner onRouteCalculated={setPlannerRoute} />
+          <LiveNavigator destination={destination} />
+        </div>
+
+        <div className="relative flex h-[600px] min-h-[600px] lg:min-h-[70vh] flex-1 flex-col">
           {isLoading && activeVehicles.length === 0 ? (
-            <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:min-h-[420px] lg:min-h-[calc(100vh-24rem)]">
+            <div className="flex h-full min-h-[600px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-10 shadow-sm">
               <Loader label="Loading active shipments..." size="lg" />
             </div>
           ) : (
@@ -727,6 +749,8 @@ function Dashboard() {
               routes={activeRoutes}
               isLoading={isLoading}
               plannerRoute={plannerRoute}
+              destination={destination}
+              onDestinationSelect={setDestination}
             />
           )}
 

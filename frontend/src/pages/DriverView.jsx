@@ -127,8 +127,9 @@ function DriverView() {
   const { speak, stop, isSpeaking, isSupported } = useVoiceAlert(preferredLang);
 
   useEffect(() => {
-    const socket = io(SOCKET_SERVER_URL, {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5055', {
       transports: ['websocket', 'polling'],
+      withCredentials: true,
     });
 
     socket.on('connect_error', () => {
