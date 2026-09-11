@@ -105,12 +105,12 @@ function ReportIncidentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/50 px-4 py-8">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/50 px-4 py-8">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="text-xl font-semibold text-slate-900">
-              Report Incident
+              Report New Incident
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               Submit a field incident with type, description, and GPS
@@ -283,7 +283,7 @@ function ReportIncidentModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />

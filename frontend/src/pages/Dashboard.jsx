@@ -11,22 +11,26 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { AlertOctagon } from 'lucide-react';
 
 import apiClient from '../api/apiClient';
 import { getApiErrorMessage } from '../api/apiError';
 import Loader from '../components/Loader';
 import MapViewer from '../components/MapViewer';
-import ReportIncidentModal from '../components/ReportIncidentModal';
 import WeatherWidget from '../components/WeatherWidget';
 import RoutePlanner from '../components/RoutePlanner';
 import CityDetailMap from '../components/CityDetailMap';
 import Chatbot from '../components/Chatbot';
 import ConnectivityMatrix from '../components/ConnectivityMatrix';
 import HazardMap from '../components/HazardMap';
+import {
+  readQueuedIncidents,
+  useIncidentModal,
+  writeQueuedIncidents,
+} from '../context/IncidentModalContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
-const INCIDENT_QUEUE_KEY = 'dm-offline-incident-queue';
 
 // ── Chart colours matching risk scheme ───────────────────────────────────────
 const STATUS_COLORS = {
@@ -214,33 +218,9 @@ const cacheShipments = (shipments) => {
   localStorage.setItem(SHIPMENTS_CACHE_KEY, JSON.stringify(shipments));
 };
 
-const readQueuedIncidents = () => {
-  try {
-    const cachedValue = localStorage.getItem(INCIDENT_QUEUE_KEY);
-    if (!cachedValue) return [];
-    const parsedValue = JSON.parse(cachedValue);
-    return Array.isArray(parsedValue) ? parsedValue : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeQueuedIncidents = (incidents) => {
-  localStorage.setItem(INCIDENT_QUEUE_KEY, JSON.stringify(incidents));
-};
-
-const buildIncidentPayload = ({ type, description, latitude, longitude }) => ({
-  type,
-  title: `${type.charAt(0).toUpperCase()}${type.slice(1)} reported from dashboard`,
-  description,
-  severity: type === 'roadblock' ? 'medium' : 'high',
-  location: {
-    lat: latitude,
-    lng: longitude,
-    address: 'Reported from live operations dashboard',
-  },
-  status: 'reported',
-});
+// Offline incident queue helpers + the submission handler now live in
+// IncidentModalContext (global) so ANY page can report an incident — the
+// Navbar button, the Dashboard FAB, and future pages all share one flow.
 
 // ── AI Assistant Chat Panel ───────────────────────────────────────────────────
 const AiAssistantPanel = Chatbot;
@@ -354,9 +334,10 @@ function Dashboard() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
   const [routeRiskResults, setRouteRiskResults] = useState({});
-  const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
-  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+
+  // Global Report Incident modal control — shared with the Navbar button.
+  const { openReportModal } = useIncidentModal();
   const [plannerRoute, setPlannerRoute] = useState(null);
   const [selectedCity, setSelectedCity] = useState('Silchar, Assam');
 
@@ -574,48 +555,6 @@ function Dashboard() {
     }
   };
 
-  const handleReportIncident = async ({
-    type,
-    description,
-    latitude,
-    longitude,
-  }) => {
-    const payload = buildIncidentPayload({
-      type,
-      description,
-      latitude,
-      longitude,
-    });
-
-    if (!navigator.onLine) {
-      const queuedIncidents = readQueuedIncidents();
-      writeQueuedIncidents([...queuedIncidents, payload]);
-      toast('You are offline. Incident saved for later sync.', { icon: '📡' });
-      setIsIncidentModalOpen(false);
-      return;
-    }
-
-    try {
-      setIsSubmittingIncident(true);
-      await apiClient.post('/incidents', payload);
-      toast.success(
-        'Incident reported. Agentic loop triggered — monitoring for rerouting...'
-      );
-      setIsIncidentModalOpen(false);
-    } catch (error) {
-      const queuedIncidents = readQueuedIncidents();
-      writeQueuedIncidents([...queuedIncidents, payload]);
-      toast.error(
-        getApiErrorMessage(
-          error,
-          'Failed to submit incident report. Saved for retry.'
-        )
-      );
-    } finally {
-      setIsSubmittingIncident(false);
-    }
-  };
-
   return (
     <div className="flex min-h-full flex-col gap-6">
       {/* Header */}
@@ -732,12 +671,12 @@ function Dashboard() {
 
           <button
             type="button"
-            onClick={() => setIsIncidentModalOpen(true)}
-            className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-200"
+            onClick={openReportModal}
+            className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg ring-2 ring-white transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
             aria-label={t('Report Incident')}
             title={t('Report Incident')}
           >
-            <span className="text-3xl leading-none">+</span>
+            <AlertOctagon className="h-6 w-6" />
           </button>
         </div>
       </section>
@@ -786,13 +725,6 @@ function Dashboard() {
       <section className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100">
         <HazardMap />
       </section>
-
-      <ReportIncidentModal
-        isOpen={isIncidentModalOpen}
-        isSubmitting={isSubmittingIncident}
-        onClose={() => setIsIncidentModalOpen(false)}
-        onSubmit={handleReportIncident}
-      />
 
       <AiAssistantPanel
         isOpen={isAiPanelOpen}
