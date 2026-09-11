@@ -77,21 +77,9 @@ function WeatherWidget() {
   const temperature = weatherData?.main?.temp;
   const condition = weatherData?.weather?.[0]?.main || 'Unknown';
   const description = weatherData?.weather?.[0]?.description || 'No description';
+  const icon = weatherData?.weather?.[0]?.icon;
   const cityName = weatherData?.name || 'Silchar';
 
-  const getEmoji = (cond) => {
-    switch (cond?.toLowerCase()) {
-      case 'clear': return '☀️';
-      case 'clouds': return '☁️';
-      case 'rain':
-      case 'drizzle': return '🌧️';
-      case 'thunderstorm': return '⛈️';
-      case 'snow': return '❄️';
-      default: return '🌤️';
-    }
-  };
-
-  const emoji = getEmoji(condition);
   const isRaining = ['rain', 'drizzle', 'thunderstorm'].includes(condition?.toLowerCase());
 
   return (
@@ -106,7 +94,15 @@ function WeatherWidget() {
 
           <div className="mt-4 flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
-              {emoji}
+              {icon ? (
+                <img 
+                  src={`http://openweathermap.org/img/wn/${icon}@2x.png`} 
+                  alt={description} 
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <Cloud className="h-8 w-8 text-blue-400" />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1">
