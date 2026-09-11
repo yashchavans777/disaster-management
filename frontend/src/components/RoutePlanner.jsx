@@ -83,22 +83,39 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
     setIsCalculating(true);
 
     try {
-      // 1. Fetch real road geometry from OSRM
+      // 1. Fetch real road geometry from OSRM (alternatives=2 asks the engine
+      // for genuine detour roads in addition to the fastest primary route)
       const [startLat, startLng] = origin;
       const [endLat, endLng] = destination;
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson`;
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&alternatives=2`;
 
       let coordinates = [];
+      let alternateCoordinates = [];
+      let delayEstimate = '+3.5 hrs delay';
       try {
         const osrmRes = await fetch(osrmUrl);
         const osrmData = await osrmRes.json();
 
         if (osrmData.code === 'Ok' && osrmData.routes?.length > 0) {
+          const [primaryRoute, alternateRoute] = osrmData.routes;
           // GeoJSON coordinates are [lon, lat], Leaflet expects [lat, lon]
-          coordinates = osrmData.routes[0].geometry.coordinates.map((coord) => [
-            coord[1],
-            coord[0],
-          ]);
+          const toLeafletCoords = (route) =>
+            route.geometry.coordinates.map((coord) => [coord[1], coord[0]]);
+
+          coordinates = toLeafletCoords(primaryRoute);
+
+          // Prefer the REAL OSRM alternative road when the engine returns one;
+          // otherwise fall back to the geometric parabolic bypass.
+          if (alternateRoute) {
+            alternateCoordinates = toLeafletCoords(alternateRoute);
+            const extraHours = Math.max(
+              0.1,
+              (alternateRoute.duration - primaryRoute.duration) / 3600
+            );
+            delayEstimate = `+${extraHours.toFixed(1)} hrs delay`;
+          } else {
+            alternateCoordinates = buildAlternateRoute(coordinates);
+          }
         } else {
           throw new Error('No route found from OSRM');
         }
@@ -116,6 +133,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
           ],
           [endLat, endLng],
         ];
+        alternateCoordinates = buildAlternateRoute(coordinates);
       }
 
       // Calculate bounds for Leaflet's map.fitBounds
@@ -130,9 +148,6 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
       const midpointIndex = Math.floor(coordinates.length / 2);
       const midpoint = coordinates[midpointIndex];
 
-      // Generate alternate safe route detour and calculate delay
-      const alternateCoordinates = buildAlternateRoute(coordinates);
-      const delayEstimate = '+3.5 hrs delay';
       const blockedCorridorName = 'NH-6 Blocked Corridor (Barak Overflow / Landslide)';
 
       try {
@@ -144,7 +159,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
         console.warn('Risk prediction fallback to active alert', riskErr);
       }
 
-      toast('Blocked corridor detected on NH-6! Alternate safe route generated (+3.5 hrs delay).', {
+      toast(`Blocked corridor detected on NH-6! Alternate safe route generated (${delayEstimate}).`, {
         icon: '⚠️',
       });
 
