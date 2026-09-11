@@ -13,7 +13,6 @@ import {
   YAxis,
 } from 'recharts';
 import { AlertOctagon } from 'lucide-react';
-
 import apiClient from '../api/apiClient';
 import { getApiErrorMessage } from '../api/apiError';
 import Loader from '../components/Loader';
@@ -33,6 +32,17 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 
 const SHIPMENTS_CACHE_KEY = 'dm-shipments-cache';
+
+// Direct URL to the FastAPI AI microservice for /evaluate-risk
+const FASTAPI_URL =
+  import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000';
+
+const normalizeRiskLevel = (level = 'moderate') => {
+  const normalized = String(level).toLowerCase();
+  if (normalized === 'medium') return 'moderate';
+  if (['low', 'moderate', 'high'].includes(normalized)) return normalized;
+  return 'moderate';
+};
 
 // ── Chart colours matching risk scheme ───────────────────────────────────────
 const STATUS_COLORS = {
@@ -341,8 +351,12 @@ function Dashboard() {
   // Global Report Incident modal control — shared with the Navbar button.
   const { openReportModal } = useIncidentModal();
   const [plannerRoute, setPlannerRoute] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [hasActiveRoute, setHasActiveRoute] = useState(false);
+  const [plannedRouteRisk, setPlannedRouteRisk] = useState(null);
   const [selectedCity, setSelectedCity] = useState('Silchar, Assam');
   const [destination, setDestination] = useState([24.815, 92.795]);
+  const isEvaluating = isEvaluatingRisk;
 
   const fetchShipments = useCallback(async () => {
     try {
@@ -490,13 +504,120 @@ function Dashboard() {
     [shipmentRoutes, routeRiskResults]
   );
 
+  // Synchronize active route state if live shipment routes are present
+  useEffect(() => {
+    if (shipmentRoutes.length > 0) {
+      setHasActiveRoute(true);
+    }
+  }, [shipmentRoutes.length]);
+
+  const riskLevelStyles = {
+    high: 'bg-red-100 text-red-700 border-red-300',
+    moderate: 'bg-amber-100 text-amber-700 border-amber-300',
+    low: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  };
+
+  // Wrapper around route generation so that receiving route coordinates
+  // activates hasActiveRoute, saves routeCoordinates, and resets prior risk result.
+  const handlePlannerRouteCalculated = (routeData) => {
+    setPlannerRoute(routeData);
+    const coords =
+      routeData?.coordinates ||
+      routeData?.routeCoordinates ||
+      (Array.isArray(routeData) ? routeData : []);
+    setRouteCoordinates(coords);
+    setHasActiveRoute(coords.length > 0 || !!routeData);
+    setPlannedRouteRisk(null);
+  };
+
   const handleEvaluateRouteRisks = async () => {
-    if (!shipmentRoutes.length) return;
+    // Nothing to evaluate if there is no active route yet.
+    if (!hasActiveRoute && !routeCoordinates.length && !plannerRoute && !shipmentRoutes.length) return;
 
     try {
       setIsEvaluatingRisk(true);
       setErrorMessage('');
 
+      // ── Case A: Plotted route coordinates or plannerRoute.
+      // Send route waypoints to the FastAPI backend (/evaluate-risk).
+      const coords =
+        (Array.isArray(routeCoordinates) && routeCoordinates.length > 0)
+          ? routeCoordinates
+          : (plannerRoute?.coordinates || []);
+
+      if (coords.length > 0) {
+        // Sample waypoints along the entire route for a robust risk profile.
+        const indexes = [
+          ...new Set([
+            0,
+            Math.floor(coords.length * 0.25),
+            Math.floor(coords.length * 0.5),
+            Math.floor(coords.length * 0.75),
+            coords.length - 1,
+          ]),
+        ].sort((a, b) => a - b);
+
+        const evaluations = [];
+        for (const idx of indexes) {
+          const [lat, lng] = coords[idx];
+          try {
+            const response = await fetch(`${FASTAPI_URL}/evaluate-risk`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lat, lng }),
+            });
+            if (!response.ok) {
+              throw new Error(`Risk API returned HTTP ${response.status}`);
+            }
+            evaluations.push(await response.json());
+          } catch (err) {
+            console.warn(
+              'Planned route risk evaluation via FastAPI failed, attempting fallback:',
+              err
+            );
+            try {
+              const fallbackRes = await apiClient.post('/routes/evaluate-risk', { lat, lng });
+              if (fallbackRes.data?.data) {
+                evaluations.push(fallbackRes.data.data);
+              }
+            } catch (fallbackErr) {
+              console.warn('Fallback risk evaluation error:', fallbackErr);
+            }
+          }
+        }
+
+        if (evaluations.length) {
+          // Aggregate the worst risk level across sampled waypoints.
+          const levelOrder = { low: 0, moderate: 1, high: 2 };
+          let worst = {
+            riskLevel: 'low',
+            justification: evaluations[0]?.justification,
+          };
+          for (const evaluation of evaluations) {
+            const level = normalizeRiskLevel(
+              evaluation.risk_level || evaluation.riskLevel
+            );
+            if (levelOrder[level] > levelOrder[worst.riskLevel]) {
+              worst = {
+                riskLevel: level,
+                justification:
+                  evaluation.justification || worst.justification,
+                riskScore: evaluation.risk_score ?? worst.riskScore,
+              };
+            }
+          }
+
+          setPlannedRouteRisk(worst);
+          toast.success(
+            `Planned route evaluated — risk: ${worst.riskLevel.toUpperCase()}`
+          );
+        } else {
+          toast.error('Failed to evaluate planned route risk.');
+        }
+        return;
+      }
+
+      // ── Case B: No user-planned route → evaluate live shipment routes.
       const evaluationEntries = await Promise.all(
         shipmentRoutes.map(async (route) => {
           const [lat, lng] = route.coordinates[0] || [];
@@ -626,12 +747,19 @@ function Dashboard() {
           <button
             type="button"
             onClick={handleEvaluateRouteRisks}
-            disabled={
-              isLoading || isEvaluatingRisk || shipmentRoutes.length === 0
+            disabled={!hasActiveRoute || isEvaluating}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 ${
+              !hasActiveRoute || isEvaluating
+                ? 'opacity-50 cursor-not-allowed bg-slate-400'
+                : 'cursor-pointer bg-blue-600 hover:bg-blue-700 hover:shadow-md active:bg-blue-800'
+            }`}
+            title={
+              hasActiveRoute
+                ? 'Evaluate route risks with AI deep learning model'
+                : 'Plot a safe route first to enable risk evaluation'
             }
-            className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isEvaluatingRisk
+            {isEvaluating
               ? t('Evaluating...')
               : `🧠 ${t('Evaluate Route Risks (DL)')}`}
           </button>
@@ -666,6 +794,29 @@ function Dashboard() {
           </span>
         </div>
 
+        {plannedRouteRisk ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-600">
+                🧠 Planned Route Risk Evaluation
+              </span>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase ${
+                  riskLevelStyles[plannedRouteRisk.riskLevel] ||
+                  riskLevelStyles.moderate
+                }`}
+              >
+                {plannedRouteRisk.riskLevel}
+              </span>
+            </div>
+            {plannedRouteRisk.justification ? (
+              <p className="text-[11px] leading-relaxed text-slate-600">
+                {plannedRouteRisk.justification}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {errorMessage ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {errorMessage}
@@ -673,7 +824,11 @@ function Dashboard() {
         ) : null}
 
         <div className="flex flex-col md:flex-row gap-4 mb-4 items-start w-full">
-          <RoutePlanner onRouteCalculated={setPlannerRoute} />
+          <RoutePlanner
+            onRouteCalculated={handlePlannerRouteCalculated}
+            setRouteCoordinates={setRouteCoordinates}
+            setHasActiveRoute={setHasActiveRoute}
+          />
           <LiveNavigator destination={destination} />
         </div>
 
@@ -696,7 +851,7 @@ function Dashboard() {
           <button
             type="button"
             onClick={openReportModal}
-            className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg ring-2 ring-white transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
+            className="absolute bottom-5 right-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-xl transition-all hover:bg-rose-700 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-rose-200 z-[500] cursor-pointer"
             aria-label={t('Report Incident')}
             title={t('Report Incident')}
           >
@@ -733,7 +888,7 @@ function Dashboard() {
               onChange={(e) => setSelectedCity(e.target.value)}
               className="rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-800 shadow-xs transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
-              <option value="Tawang, Arunachal Pradesh">Tawang, Arunachal Pradesh</option>
+              <option value="Itanagar, Arunachal Pradesh">Itanagar, Arunachal Pradesh</option>
               <option value="Silchar, Assam">Silchar, Assam</option>
               <option value="Aizawl, Mizoram">Aizawl, Mizoram</option>
               <option value="Guwahati, Assam">Guwahati, Assam</option>
@@ -749,6 +904,8 @@ function Dashboard() {
       <section className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-sm border border-slate-100">
         <HazardMap />
       </section>
+
+
 
       <AiAssistantPanel
         isOpen={isAiPanelOpen}

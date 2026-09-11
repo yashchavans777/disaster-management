@@ -16,6 +16,10 @@ export const SUPPORTED_LANGUAGES = [
 export const STATIC_DICTIONARY = {
   hi: {
     'Report Incident': 'घटना की रिपोर्ट करें',
+    'Report New Incident': 'नई घटना की रिपोर्ट करें',
+    'Submit Report': 'रिपोर्ट सबमिट करें',
+    'Incident Description': 'घटना का विवरण',
+    'Cancel': 'रद्द करें',
     'Evaluate Route Risks': 'मार्ग जोखिम का मूल्यांकन करें',
     'Evaluate Route Risks (DL)': 'मार्ग जोखिम का मूल्यांकन करें (डीएल)',
     'Find Safe Route': 'सुरक्षित मार्ग खोजें',
@@ -44,6 +48,10 @@ export const STATIC_DICTIONARY = {
   },
   as: {
     'Report Incident': 'দুৰ্ঘটনাৰ প্ৰতিবেদন দিয়ক',
+    'Report New Incident': 'নতুন ঘটনাৰ প্ৰতিবেদন দিয়ক',
+    'Submit Report': 'প্ৰতিবেদন দাখিল কৰক',
+    'Incident Description': 'घटनाৰ বিৱৰণ',
+    'Cancel': 'বাতিল কৰক',
     'Evaluate Route Risks': 'পথৰ বিপদ মূল্যায়ন কৰক',
     'Evaluate Route Risks (DL)': 'পথৰ বিপদ মূল্যায়ন কৰক (ডিএল)',
     'Find Safe Route': 'নিৰাপদ পথ বিচাৰক',
@@ -72,6 +80,10 @@ export const STATIC_DICTIONARY = {
   },
   bn: {
     'Report Incident': 'ঘটনা রিপোর্ট করুন',
+    'Report New Incident': 'নতুন ঘটনার বিবরণ দিন',
+    'Submit Report': 'রিপোর্ট জমা দিন',
+    'Incident Description': 'ঘটনার বিবরণ',
+    'Cancel': 'বাতিল করুন',
     'Evaluate Route Risks': 'পথের ঝুঁকি মূল্যায়ন করুন',
     'Evaluate Route Risks (DL)': 'পথের ঝুঁকি মূল্যায়ন করুন (ডিএল)',
     'Find Safe Route': 'নিরাপদ পথ খুঁজুন',

@@ -4,10 +4,10 @@ import { Lock, MapPin, Navigation, Shield, ZoomIn } from 'lucide-react';
 
 // Fallback presets for the 4 cities in case Nominatim API is rate-limited or offline
 const CITY_FALLBACKS = {
-  'Tawang, Arunachal Pradesh': {
-    name: 'Tawang',
-    center: [27.586, 91.865],
-    bbox: [27.530, 27.640, 91.810, 91.920], // south, north, west, east
+  'Itanagar, Arunachal Pradesh': {
+    name: 'Itanagar',
+    center: [27.0844, 93.6053],
+    bbox: [27.020, 27.140, 93.550, 93.680], // south, north, west, east
   },
   'Silchar, Assam': {
     name: 'Silchar',

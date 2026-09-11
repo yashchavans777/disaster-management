@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext';
 export default function Navbar({ onOpenIncidentModal, onEvaluateRisks, isEvaluating = false }) {
   const { selectedLanguage, setSelectedLanguage, languages, t } = useLanguage();
   const { openReportModal } = useIncidentModal();
+  const handleOpenReportModal = onOpenIncidentModal || openReportModal;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const dropdownRef = useRef(null);
@@ -101,13 +102,12 @@ export default function Navbar({ onOpenIncidentModal, onEvaluateRisks, isEvaluat
             </button>
           )}
 
-          {/* Key UI Button 2: Report Incident — always-visible emergency action.
-              Uses the global IncidentModalContext so it works from every page. */}
+          {/* Key UI Button 2: Report Incident (Prominent emergency rose button) */}
           <button
             type="button"
-            onClick={onOpenIncidentModal || openReportModal}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm ring-1 ring-rose-700/20 transition focus:outline-none focus:ring-4 focus:ring-rose-200"
-            title="Report road incident or hazard"
+            onClick={handleOpenReportModal}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:shadow-sm cursor-pointer"
+            title="Report emergency road hazard or incident"
           >
             <AlertOctagon className="h-3.5 w-3.5" />
             <span>{t('Report Incident')}</span>

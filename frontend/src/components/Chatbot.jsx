@@ -216,7 +216,7 @@ export default function Chatbot({ isOpen = true, onClose }) {
     ? `fixed inset-0 z-[9999] flex h-full w-full flex-col m-0 overflow-hidden rounded-none shadow-2xl transition-all duration-200 ${
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-slate-900'
       }`
-    : `fixed bottom-4 right-4 top-auto z-[1050] flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 sm:max-w-md ${
+    : `fixed bottom-4 right-4 top-auto z-[1050] flex h-[600px] max-h-[85vh] w-[calc(100vw-2rem)] max-w-sm sm:max-w-md flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ${
         isDarkMode
           ? 'border-gray-800 bg-gray-900 text-white'
           : 'border-slate-200 bg-white text-slate-900'
@@ -225,17 +225,16 @@ export default function Chatbot({ isOpen = true, onClose }) {
   // Header background — shrink-0 keeps the header pinned at the top of the
   // flex column; the flex container can never squish or push it out of view.
   const headerClasses = isDarkMode
-    ? 'flex shrink-0 items-center justify-between border-b border-gray-800 bg-gray-950 px-4 py-3 text-white'
-    : 'flex shrink-0 items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white';
+    ? 'flex shrink-0 items-center justify-between border-b border-gray-800 bg-gray-950 p-4 text-white'
+    : 'flex shrink-0 items-center justify-between border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white';
 
-  // Body container — flex-1 + min-h-0 (flexbox min-size safety) + vertical
-  // scroll: the messages area takes the remaining space and scrolls inside.
-  const bodyClasses = `min-h-0 flex-1 overflow-y-auto px-4 py-4 ${
+  // Body container — min-h-0 + flex-1 + vertical scroll: inner messages scroll smoothly
+  const bodyClasses = `min-h-0 flex-1 overflow-y-auto p-4 ${
     isDarkMode ? 'bg-gray-900' : 'bg-slate-50'
   }`;
 
   // Footer / form container — shrink-0 keeps the input row fixed at the bottom.
-  const footerClasses = `shrink-0 border-t px-4 py-3 ${
+  const footerClasses = `shrink-0 border-t p-4 ${
     isDarkMode
       ? 'border-gray-800 bg-gray-950'
       : 'border-slate-200 bg-white'

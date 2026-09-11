@@ -116,52 +116,67 @@
       }
     ]
   },
-  "tawang": {
-    "city": "Tawang",
+  "itanagar": {
+    "city": "Itanagar",
     "state": "Arunachal Pradesh",
-    "center": [27.5860, 91.8594],
+    "center": [27.0844, 93.6053],
     "zoom": 13,
     "hazard_zones": [
       {
-        "id": "tawang-chu-valley",
-        "name": "Tawang Chu River Valley",
+        "id": "itanagar-dikrong-floodplain",
+        "name": "Dikrong River Floodplain",
         "hazard_type": "flood",
         "hazardType": "flood",
         "risk_level": "High Risk: Flood Zone",
-        "description": "Glacial riverbed corridor vulnerable to flash floods and sudden discharge surges.",
+        "description": "Low-lying floodplain along the Dikrong river north of Itanagar prone to monsoon overflow and inundation of connecting roads.",
         "coordinates": [
-          [27.5920, 91.8620],
-          [27.6020, 91.8730],
-          [27.5970, 91.8860],
-          [27.5870, 91.8760]
+          [27.1500, 93.5200],
+          [27.1620, 93.5450],
+          [27.1570, 93.5700],
+          [27.1400, 93.5550],
+          [27.1350, 93.5250]
         ]
       },
       {
-        "id": "tawang-lhou-slope",
-        "name": "Lhou Mudslide & Debris Corridor",
+        "id": "itanagar-karsingsa-nh415",
+        "name": "NH-415 Karsingsa Landslide Corridor",
         "hazard_type": "landslide",
         "hazardType": "landslide",
         "risk_level": "High Risk: Landslide Zone",
-        "description": "High gradient hill slopes with loose glacial debris prone to mass wasting.",
+        "description": "Critical capital lifeline stretch between Banderdewa and Itanagar repeatedly blocked by heavy mudslides at the Karsingsa block point.",
         "coordinates": [
-          [27.5620, 91.8350],
-          [27.5710, 91.8440],
-          [27.5660, 91.8530],
-          [27.5570, 91.8440]
+          [27.0980, 93.5750],
+          [27.1080, 93.5850],
+          [27.1040, 93.5980],
+          [27.0930, 93.5880]
         ]
       },
       {
-        "id": "tawang-kitpi-ridge",
-        "name": "Kitpi Ridge Slope",
+        "id": "itanagar-jollang-landslide",
+        "name": "Jollang Road Slope",
         "hazard_type": "landslide",
         "hazardType": "landslide",
         "risk_level": "High Risk: Landslide Zone",
-        "description": "Fragile mountain face along critical access roads with frequent soil slips.",
+        "description": "Steep unstable slope along Jollang Road with a history of fatal landslides during heavy monsoon rain.",
         "coordinates": [
-          [27.5760, 91.8480],
-          [27.5840, 91.8560],
-          [27.5800, 91.8660],
-          [27.5710, 91.8580]
+          [27.1180, 93.6080],
+          [27.1280, 93.6160],
+          [27.1240, 93.6260],
+          [27.1140, 93.6170]
+        ]
+      },
+      {
+        "id": "itanagar-poma-intake",
+        "name": "Poma / Pachin River Intake",
+        "hazard_type": "flood",
+        "hazardType": "flood",
+        "risk_level": "High Risk: Flood Zone",
+        "description": "River catchment feeding the Poma water intake, where flood surges previously severed the municipal drinking water supply to Itanagar.",
+        "coordinates": [
+          [27.0520, 93.5720],
+          [27.0620, 93.5820],
+          [27.0580, 93.5950],
+          [27.0470, 93.5850]
         ]
       }
     ]

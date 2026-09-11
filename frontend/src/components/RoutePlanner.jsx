@@ -6,14 +6,14 @@ import { useLanguage } from '../context/LanguageContext';
 
 // 1. Allowed Cities & Coordinates dictionary
 export const ALLOWED_CITIES = {
-  "tawang": [27.5860, 91.8594],
+  "itanagar": [27.0844, 93.6053],
   "silchar": [24.8333, 92.7789],
   "aizawl": [23.7271, 92.7176],
   "guwahati": [26.1445, 91.7362]
 };
 
 const CITY_DISPLAY_NAMES = {
-  tawang: 'Tawang, Arunachal Pradesh',
+  itanagar: 'Itanagar, Arunachal Pradesh',
   silchar: 'Silchar, Assam',
   aizawl: 'Aizawl, Mizoram',
   guwahati: 'Guwahati, Assam',
@@ -40,13 +40,21 @@ const buildAlternateRoute = (coordinates) => {
   });
 };
 
-function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }) {
+function RoutePlanner({
+  onRouteCalculated,
+  onOriginChange,
+  onDestinationChange,
+  setRouteCoordinates: externalSetRouteCoordinates,
+  setHasActiveRoute: externalSetHasActiveRoute,
+}) {
   const { t } = useLanguage();
   // 2. React state for the inputs: startInput, endInput, and errorMsg
   const [startInput, setStartInput] = useState('');
   const [endInput, setEndInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [hasActiveRoute, setHasActiveRoute] = useState(false);
 
   // 3. Validation & Routing Logic
   const handleFindSafeRoute = async (e) => {
@@ -61,7 +69,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
     const isEndValid = Object.prototype.hasOwnProperty.call(ALLOWED_CITIES, endKey);
 
     if (!isStartValid || !isEndValid) {
-      setErrorMsg("Routing is only available between Tawang, Silchar, Aizawl, and Guwahati for this demo.");
+      setErrorMsg("Routing is only available between Itanagar, Silchar, Aizawl, and Guwahati for this demo.");
       return;
     }
 
@@ -159,6 +167,15 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
         console.warn('Risk prediction fallback to active alert', riskErr);
       }
 
+      setRouteCoordinates(coordinates);
+      setHasActiveRoute(true);
+      if (externalSetRouteCoordinates) {
+        externalSetRouteCoordinates(coordinates);
+      }
+      if (externalSetHasActiveRoute) {
+        externalSetHasActiveRoute(true);
+      }
+
       toast(`Blocked corridor detected on NH-6! Alternate safe route generated (${delayEstimate}).`, {
         icon: '⚠️',
       });
@@ -171,6 +188,8 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
           origin,
           destination,
           coordinates,
+          routeCoordinates: coordinates,
+          hasActiveRoute: true,
           blockedCoordinates: coordinates,
           alternateCoordinates,
           delayEstimate,
@@ -200,7 +219,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
       </div>
 
       <p className="mb-3 text-xs text-slate-500">
-        Demo routing limited to: <span className="font-semibold text-slate-700">Tawang, Silchar, Aizawl, Guwahati</span>
+        Demo routing limited to: <span className="font-semibold text-slate-700">Itanagar, Silchar, Aizawl, Guwahati</span>
       </p>
 
       {errorMsg && (
@@ -251,7 +270,7 @@ function RoutePlanner({ onRouteCalculated, onOriginChange, onDestinationChange }
         {/* Quick select chips for user convenience */}
         <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-500 pt-0.5">
           <span className="font-medium">{t('Allowed')}:</span>
-          {['Tawang', 'Silchar', 'Aizawl', 'Guwahati'].map((city) => (
+          {['Itanagar', 'Silchar', 'Aizawl', 'Guwahati'].map((city) => (
             <button
               key={city}
               type="button"

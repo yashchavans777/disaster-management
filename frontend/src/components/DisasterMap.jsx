@@ -13,14 +13,14 @@ import toast from 'react-hot-toast';
 
 // 1. Allowed Cities & Coordinates Dictionary
 export const ALLOWED_CITIES = {
-  "tawang": [27.5860, 91.8594],
+  "itanagar": [27.0844, 93.6053],
   "silchar": [24.8333, 92.7789],
   "aizawl": [23.7271, 92.7176],
   "guwahati": [26.1445, 91.7362]
 };
 
 const CITY_LABELS = {
-  tawang: 'Tawang, Arunachal Pradesh',
+  itanagar: 'Itanagar, Arunachal Pradesh',
   silchar: 'Silchar, Assam',
   aizawl: 'Aizawl, Mizoram',
   guwahati: 'Guwahati, Assam',
@@ -132,7 +132,7 @@ export default function DisasterMap({ children, className = '' }) {
 
     if (!hasStart || !hasEnd) {
       // If invalid: Set errorMsg
-      setErrorMsg("Routing is only available between Tawang, Silchar, Aizawl, and Guwahati for this demo.");
+      setErrorMsg("Routing is only available between Itanagar, Silchar, Aizawl, and Guwahati for this demo.");
       return;
     }
 
@@ -167,7 +167,7 @@ export default function DisasterMap({ children, className = '' }) {
         </div>
 
         <p className="mb-3 text-xs text-slate-500">
-          Enter cities: <span className="font-semibold text-slate-700">Tawang, Silchar, Aizawl, Guwahati</span>
+          Enter cities: <span className="font-semibold text-slate-700">Itanagar, Silchar, Aizawl, Guwahati</span>
         </p>
 
         {errorMsg && (
@@ -218,7 +218,7 @@ export default function DisasterMap({ children, className = '' }) {
           {/* Quick city selection chips */}
           <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-500 pt-0.5">
             <span className="font-medium">Allowed:</span>
-            {['Tawang', 'Silchar', 'Aizawl', 'Guwahati'].map((city) => (
+            {['Itanagar', 'Silchar', 'Aizawl', 'Guwahati'].map((city) => (
               <button
                 key={city}
                 type="button"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, Camera, Image, LoaderCircle, MapPin, Upload, X } from 'lucide-react';
+import { AlertOctagon, AlertTriangle, Camera, Image, LoaderCircle, MapPin, Upload, X } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const incidentTypeOptions = [
   { label: 'Landslide', value: 'landslide' },
@@ -20,6 +21,7 @@ function ReportIncidentModal({
   onClose,
   onSubmit,
 }) {
+  const { t } = useLanguage();
   const [formValues, setFormValues] = useState(initialFormState);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -105,23 +107,23 @@ function ReportIncidentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/50 px-4 py-8">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-xs overflow-y-auto">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden my-auto">
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4 bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Report New Incident
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <AlertOctagon className="h-5 w-5 text-rose-600" />
+              {t('Report New Incident')}
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Submit a field incident with type, description, and GPS
-              coordinates.
+            <p className="mt-1 text-xs text-slate-600">
+              Submit a field incident with type, description, GPS coordinates, and geotagged photo.
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
             aria-label="Close incident report modal"
           >
             <X className="h-5 w-5" />
@@ -130,7 +132,7 @@ function ReportIncidentModal({
 
         <form className="space-y-5 px-6 py-5" onSubmit={handleFormSubmit}>
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Type</span>
+            <span className="text-sm font-semibold text-slate-700">Type</span>
             <select
               name="type"
               value={formValues.type}
@@ -146,8 +148,8 @@ function ReportIncidentModal({
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">
-              Description
+            <span className="text-sm font-semibold text-slate-700">
+              {t('Incident Description')}
             </span>
             <textarea
               name="description"
@@ -275,22 +277,22 @@ function ReportIncidentModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer"
             >
-              Cancel
+              {t('Cancel')}
             </button>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-slate-300 cursor-pointer"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
               ) : (
-                <AlertTriangle className="h-4 w-4" />
+                <AlertOctagon className="h-4 w-4" />
               )}
-              {isSubmitting ? 'Submitting...' : 'Submit Incident'}
+              {isSubmitting ? t('Submitting...') : t('Submit Report')}
             </button>
           </div>
         </form>

@@ -456,7 +456,12 @@ async def _call_predictive_llm(system_prompt: str) -> dict[str, str]:
     return parsed
 
 
-def _fallback_predictive_response(weather: dict, historical_context: str, historical_bias: float = 0.7) -> dict[str, Any]:
+def _fallback_predictive_response(
+    weather: dict,
+    historical_context: str,
+    historical_bias: float = 0.7,
+    city_label: str = "Silchar",
+) -> dict[str, Any]:
     """Deterministic fallback when LLM/API keys are unavailable."""
     if weather.get("available"):
         print(
@@ -490,20 +495,32 @@ def _fallback_predictive_response(weather: dict, historical_context: str, histor
         level = "moderate" if level == "low" else level
         score = max(score, 0.45)
 
+    if "itanagar" in city_label.lower() or "papum" in context_lower:
+        hazard_notes = (
+            f"Local {city_label} records identify repeated monsoon landslides on "
+            "NH-415 (Karsingsa), Jollang Road, and Dikrong/Pachin floodplain overflow, "
+            "so response teams should monitor slope-adjacent and river-bank routes."
+        )
+    else:
+        hazard_notes = (
+            "Historical Silchar/Barak Valley records identify repeated flooding, "
+            "embankment breach, and corridor disruption patterns, so response teams "
+            "should monitor vulnerable low-lying and slope-adjacent routes."
+        )
+
     level_upper = level.upper()
     if weather.get("available"):
         justification = (
             f"The current live weather shows {weather.get('weather_condition', 'unknown conditions')} with "
             f"{rainfall} mm rainfall in the last hour and {humidity}% humidity, which increases flood/landslide sensitivity. "
-            "Historical Silchar/Barak Valley records identify repeated flooding, embankment breach, and corridor disruption patterns, so response teams should monitor vulnerable low-lying and slope-adjacent routes."
+            f"{hazard_notes}"
         )
     else:
         justification = (
             "Live weather data is currently unavailable "
             f"({weather.get('error', 'OpenWeatherMap fetch failed — see server console')}), "
             "so this assessment relies on historical Silchar/Barak Valley vulnerability records only. "
-            "Historical records identify repeated flooding, embankment breach, and corridor disruption patterns, "
-            "so response teams should monitor vulnerable low-lying and slope-adjacent routes. "
+            f"{hazard_notes} "
             "Restore OPENWEATHER_API_KEY in .env to re-enable live meteorological input."
         )
     return {"risk_level": level_upper, "justification": justification, "risk_score": round(score, 4)}
@@ -663,6 +680,198 @@ def _load_silchar_history() -> str:
         except Exception as e:
             pass
     return ""
+    return ""
+
+
+# ── City-Aware Knowledge Base Loading (Itanagar / Silchar / etc.) ─────────────
+# Loads per-city disaster text files (e.g. ITANAGAR.TXT, Itanagar_disaster.txt)
+# into the RAG context window, searching both the `data/` and `db/` folders
+# case-insensitively. Falls back to the legacy Silchar corpus if none found.
+
+
+def _find_city_history_files(city: str) -> list[str]:
+    """Return absolute paths of per-city text files for the given city."""
+    city_key = (city or "").lower()
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    search_dirs = [
+        DATA_DIR,
+        os.path.join(base_dir, "db"),
+        os.path.join(base_dir, "data"),
+    ]
+    found: list[str] = []
+    seen: set[str] = set()
+    for d in dict.fromkeys(search_dirs):  # dedupe while preserving order
+        if not os.path.isdir(d):
+            continue
+        try:
+            for name in sorted(os.listdir(d)):
+                lower = name.lower()
+                if lower.endswith(".txt") and city_key in lower:
+                    path = os.path.join(d, name)
+                    if path not in seen:
+                        seen.add(path)
+                        found.append(path)
+        except Exception as e:
+            print(f"Error scanning knowledge dir {d}: {e}")
+    return found
+
+
+def _load_city_history(city: str) -> str:
+    """Load and concatenate all per-city disaster text files into one context."""
+    files = _find_city_history_files(city)
+    if files:
+        parts = []
+        for f in files:
+            try:
+                with open(f, "r", encoding="utf-8") as fh:
+                    content = fh.read().strip()
+                    if content:
+                        parts.append(
+                            f"===== {os.path.basename(f)} =====\n{content}"
+                        )
+            except Exception as e:
+                print(f"Error reading city history {f}: {e}")
+        if parts:
+            return "\n\n".join(parts)
+    # No city-specific file found → fall back to the legacy Silchar corpus.
+    return _load_silchar_history()
+
+
+def _resolve_city_for_coords(lat: float, lng: float) -> str:
+    """Return the nearest known city key for the given coordinates."""
+    best_key = "silchar"
+    best_dist = float("inf")
+    for key, (clat, clng) in NER_LOC_COORDS.items():
+        dist = math.hypot(lat - clat, lng - clng)
+        if dist < best_dist:
+            best_dist = dist
+            best_key = key
+    return best_key
+
+
+def _context_confidence_score(context: str, city: str, lat: float, lng: float) -> float:
+    """Heuristic confidence that local RAG context is sufficient (0.0 - 1.0)."""
+    if not context:
+        return 0.0
+    lower = context.lower()
+    score = 0.0
+
+    # City name mentioned in the local context.
+    city_tokens = [t for t in re.split(r"[^a-z]+", city.lower()) if t]
+    if city_tokens and any(tok in lower for tok in city_tokens):
+        score += 0.4
+
+    # Hazard-relevant keywords present.
+    hazard_kws = [
+        "landslide", "flood", "floodplain", "hazard", "monsoon",
+        "landslip", "river", "mudslide", "inundation",
+    ]
+    hits = sum(1 for kw in hazard_kws if kw in lower)
+    score += min(0.4, hits * 0.1)
+
+    # Coordinate proximity mentioned.
+    if f"{float(lat):.2f}" in lower or f"{float(lng):.2f}" in lower:
+        score += 0.2
+
+    # Length signal: a very short context is weak.
+    if len(context) < 300:
+        score -= 0.2
+
+    return min(max(score, 0.0), 1.0)
+    return min(max(score, 0.0), 1.0)
+
+
+# ── Web Search Fallback (official government sources) ─────────────────────────
+# If the local Itanagar .txt context is too thin, augment the LLM prompt with
+# snippets from an official-source web search (DuckDuckGo HTML results parsed
+# with BeautifulSoup when available, else a lightweight regex fallback).
+
+
+def _strip_html(text: str) -> str:
+    """Remove HTML tags/entities from a raw snippet string (regex fallback)."""
+    text = re.sub(r"<[^>]+>", " ", text or "")
+    text = re.sub(r"&[a-zA-Z#0-9]+;", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _duckduckgo_search(query: str, max_results: int = 5) -> list[dict]:
+    """Lightweight DuckDuckGo HTML search. Returns [{"title","snippet","url"}]."""
+    results: list[dict] = []
+    try:
+        response = httpx.get(
+            "https://html.duckduckgo.com/html/",
+            params={"q": query},
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (compatible; NERDisasterManagement/1.0; "
+                    "+http://localhost)"
+                )
+            },
+            timeout=12.0,
+            follow_redirects=True,
+        )
+        response.raise_for_status()
+        html = response.text
+    except Exception as exc:
+        print(f"[WebFallback] DuckDuckGo search error: {exc}")
+        return results
+
+    try:
+        from bs4 import BeautifulSoup
+
+        soup = BeautifulSoup(html, "html.parser")
+        for result in soup.select("div.result")[:max_results]:
+            title_el = result.select_one("a.result__a")
+            snippet_el = result.select_one("a.result__snippet")
+            url_el = result.select_one(".result__url")
+            title = _strip_html(title_el.get_text()) if title_el else ""
+            snippet = _strip_html(snippet_el.get_text()) if snippet_el else ""
+            url = url_el.get_text(strip=True) if url_el else None
+            if title or snippet:
+                results.append(
+                    {"title": title, "snippet": snippet, "url": url}
+                )
+    except ImportError:
+        # Regex fallback when BeautifulSoup is unavailable.
+        titles = re.findall(r'class="result__a"[^>]*>(.*?)</a>', html)[:max_results]
+        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html)[:max_results]
+        for title_m, snip_m in zip(titles, snippets):
+            results.append(
+                {
+                    "title": _strip_html(title_m),
+                    "snippet": _strip_html(snip_m),
+                    "url": None,
+                }
+            )
+
+    return results
+
+
+def _official_source_search(city: str) -> tuple[bool, str]:
+    """Search official government sources for hazard zones. Returns (found, text)."""
+    query = (
+        f"{city} official government landslide hazard zones "
+        "NDMA ASDMA Arunachal Pradesh flood"
+    )
+    try:
+        results = _duckduckgo_search(query, max_results=5)
+    except Exception as exc:
+        print(f"[WebFallback] search raised: {exc}")
+        return False, ""
+
+    if not results:
+        return False, ""
+
+    lines = ["[WEB SEARCH FALLBACK — OFFICIAL GOVERNMENT SOURCES]"]
+    for r in results:
+        title = r.get("title") or ""
+        snippet = r.get("snippet") or ""
+        url = r.get("url") or ""
+        combined = f"- {title}: {snippet}"
+        if url:
+            combined += f" ({url})"
+        lines.append(combined.strip())
+    return True, "\n".join(lines)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -672,8 +881,9 @@ def _load_silchar_history() -> str:
 class PredictRiskRequest(BaseModel):
     lat: float
     lng: float
+    city: Optional[str] = None
     weather: Optional[dict] = None
-    historical_bias: float = Field(default=0.0, ge=0.0, le=1.0)
+    historical_bias: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class RagQueryRequest(BaseModel):
@@ -712,8 +922,10 @@ def health():
 async def predict_risk(req: PredictRiskRequest):
     """
     AI/ML predictive analytics endpoint.
-    Combines live OpenWeatherMap data with Silchar historical RAG context and
-    Groq/Qwen prompt engineering to predict flood/landslide risk.
+    Combines live OpenWeatherMap data with a city-aware historical RAG context
+    (e.g. Itanagar / Silchar .txt knowledge base) and Groq/Qwen prompt
+    engineering to predict flood/landslide risk. When the local context is too
+    thin, it augments the LLM with an official government web-search fallback.
     """
     # ── Weather resolution ────────────────────────────────────────────────────
     # Prefer client-injected weather ONLY when it carries real metrics.
@@ -736,12 +948,39 @@ async def predict_risk(req: PredictRiskRequest):
             )
         live_weather = await get_live_weather(req.lat, req.lng)
 
-    raw_history = _load_silchar_history()
+    # 1. Resolve which city knowledge base to use (explicit city → nearest coords).
+    raw_city = (req.city or "").strip().lower()
+    city = raw_city or _resolve_city_for_coords(req.lat, req.lng)
+    city_label = city.replace("_", " ").title()
+
+    raw_history = _load_city_history(city)
+
+    # 2. Heuristic confidence in the local Itanagar .txt context.
+    confidence = _context_confidence_score(raw_history, city, req.lat, req.lng)
+
+    # 3. If local context is insufficient, fall back to official government web search.
+    web_fallback_used = False
+    web_sources: list[str] = []
+    if confidence < 0.5:
+        found, web_text = _official_source_search(city_label)
+        if found:
+            web_fallback_used = True
+            raw_history = f"{raw_history}\n\n{web_text}"
+            # Capture just the source URLs for transparency in the response.
+            web_sources = [
+                line for line in web_text.splitlines()
+                if "(" in line and "http" in line
+            ]
+
+    retrieval_query = (
+        f"{city_label} landslide flood hazard zones monsoon "
+        "Dikrong Papum Pare NDMA ASDMA"
+    )
     historical_context = _retrieve_top_chunks(
         raw_history,
-        "Silchar Cachar Barak flood landslide embankment breach rainfall Betukandi Berenga",
-        top_k=3,
-        max_chars=7000,
+        retrieval_query,
+        top_k=4,
+        max_chars=9000,
     )
     live_weather_text = _format_live_weather(live_weather)
     system_prompt = _build_predictive_prompt(historical_context, live_weather_text)
@@ -782,6 +1021,7 @@ async def predict_risk(req: PredictRiskRequest):
             live_weather,
             historical_context,
             historical_bias=req.historical_bias or 0.7,
+            city_label=city_label,
         )
         prediction_source = "deterministic-weather-rag-fallback"
         risk_score = prediction.get("risk_score")
@@ -795,6 +1035,7 @@ async def predict_risk(req: PredictRiskRequest):
     return {
         "lat": req.lat,
         "lng": req.lng,
+        "city": city_label,
         "risk_level": risk_level,
         "riskLevel": risk_level.lower(),
         "justification": prediction.get("justification", "Risk evaluated using live weather and historical vulnerability context."),
@@ -803,6 +1044,9 @@ async def predict_risk(req: PredictRiskRequest):
         "prompt_preview": system_prompt[:1200],
         "risk_score": risk_score,
         "model": prediction_source,
+        "context_confidence": round(confidence, 3),
+        "web_fallback_used": web_fallback_used,
+        "web_sources": web_sources,
     }
 
 
@@ -852,7 +1096,16 @@ async def rag_query(req: RagQueryRequest):
         raise HTTPException(status_code=400, detail="question or query cannot be empty")
 
     # 1. Inspect & Clamp RAG Document Retrieval (top 2-3 chunks maximum, <= 10000 chars)
-    raw_content = req.context or _load_silchar_history()
+    # Blend the Itanagar knowledge base with the legacy Silchar corpus so the
+    # assistant can answer about the newly-supported capital city too.
+    if req.context:
+        raw_content = req.context
+    else:
+        itanagar_context = _load_city_history("itanagar")
+        silchar_context = _load_silchar_history()
+        raw_content = "\n\n".join(
+            part for part in (itanagar_context, silchar_context) if part
+        ) or ""
     file_content = _retrieve_top_chunks(raw_content, user_query, top_k=3, max_chars=10000)
 
     system_prompt = (
@@ -1395,7 +1648,7 @@ def _load_hazard_zones_data() -> dict:
 def get_city_hazard_zones(city_name: str):
     """
     Returns government-designated high-risk areas (flood/landslide) with polygon coordinates
-    for the requested city: Silchar, Aizawl, Tawang, or Guwahati.
+    for the requested city: Silchar, Aizawl, Itanagar, or Guwahati.
     """
     data = _load_hazard_zones_data()
     # Normalize city_name (e.g. "Silchar, Assam" -> "silchar")
