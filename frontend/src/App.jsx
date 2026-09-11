@@ -212,10 +212,39 @@ function AppContent() {
 }
 
 function App() {
-  useRegisterSW({
+  const { updateServiceWorker } = useRegisterSW({
     immediate: true,
     onRegisteredSW() {},
     onRegisterError() {},
+    // Fires when a new precache revision (new build hashes) is detected in the
+    // background: the classic "New update available — click to refresh" flow.
+    onNeedRefresh() {
+      toast(
+        (t) => (
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+            <span className="text-sm font-medium text-slate-800">
+              New update available!
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                updateServiceWorker(true);
+              }}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              Refresh
+            </button>
+          </div>
+        ),
+        { duration: Infinity }
+      );
+    },
+    // Fires once the Service Worker has precached the full app shell:
+    // from this point the app can be opened with zero network.
+    onOfflineReady() {
+      toast.success('App is ready to work offline.');
+    },
   });
 
   return (

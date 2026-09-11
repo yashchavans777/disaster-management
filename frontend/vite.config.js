@@ -6,17 +6,17 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' mode: when a new build is detected (new precache revision hashes),
+      // App.jsx shows a "New update available — Refresh" toast and reloads on click.
+      registerType: 'prompt',
       devOptions: {
         enabled: true,
         // Use 'classic' SW type in dev to avoid globbing non-existent build assets
         type: 'classic',
         navigateFallback: 'index.html',
       },
-      // Only include assets that will definitely exist in the build output.
-      // Omitting pwa icon filenames here prevents the "glob pattern matches no files"
-      // warning during `vite dev` when those files aren't in public/ yet.
-      includeAssets: ['favicon.ico'],
+      // Precache the manifest icons so the installed app works fully offline.
+      includeAssets: ['pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'SmartLogistics NER',
         short_name: 'SmartLogistics',
@@ -28,7 +28,20 @@ export default defineConfig({
         orientation: 'portrait-primary',
         start_url: '/',
         scope: '/',
-        icons: [],
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
       },
       workbox: {
         // Explicit glob patterns scoped to the Vite output directory.
