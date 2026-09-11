@@ -16,10 +16,9 @@ const simulateOfflineSync = async () => {
 const startSyncWorker = () => {
   const triggerSync = async () => {
     try {
-      const syncedRecords = await simulateOfflineSync();
-      console.log(`Offline sync completed for ${syncedRecords.length} record(s).`);
+      await simulateOfflineSync();
     } catch (error) {
-      console.error('Offline sync worker failed:', error.message);
+      process.stderr.write(`Offline sync worker failed: ${error.message}\n`);
     }
   };
 

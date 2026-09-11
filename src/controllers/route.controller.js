@@ -22,7 +22,12 @@ const evaluateRouteRisk = async (req, res) => {
       weather: routeRiskInputs,
     });
   } catch (error) {
-    return apiResponse.error(res, 500, 'Failed to evaluate route risk', error.message);
+    return apiResponse.error(
+      res,
+      500,
+      'Failed to evaluate route risk',
+      error.message
+    );
   }
 };
 

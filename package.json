@@ -7,11 +7,14 @@
     "test": "tests"
   },
   "scripts": {
+    "start": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
+    "dev": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
     "backend": "node server.js",
-    "frontend": "npm --prefix ../tourmitra-web-for-SIH- run dev",
-    "fastapi": "uvicorn fastapi-server.main:app --reload --host 0.0.0.0 --port 8000",
-    "dev:all": "concurrently -n backend,frontend,fastapi -c blue,green,magenta \"npm run backend\" \"npm run frontend\" \"npm run fastapi\"",
-    "test": "echo \"No automated tests configured yet\"",
+    "frontend": "npm --prefix frontend run dev",
+    "fastapi": "python -m uvicorn main:app --app-dir fastapi-server --reload --host 0.0.0.0 --port 8000",
+    "setup:python": "pip install -r fastapi-server/requirements.txt",
+    "format": "npx prettier --write \"src/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"fastapi-server/**/*.py\" \"server.js\"",
+    "test": "node tests/auth.test.js",
     "seed": "node src/utils/seed.js"
   },
   "repository": {
@@ -33,12 +36,18 @@
   },
   "homepage": "https://github.com/yashchavans777/disaster-management#readme",
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "concurrently": "^10.0.5",
+    "prettier": "^3.3.3"
   },
   "dependencies": {
     "axios": "^1.20.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.9.4"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.4",
+    "node-cron": "^4.6.0",
+    "socket.io": "^4.8.3"
   }
 }

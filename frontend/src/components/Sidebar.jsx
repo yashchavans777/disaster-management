@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AlertOctagon } from 'lucide-react';
+import ReportIncidentModal from './ReportIncidentModal';
+
+const t = (key) => key;
 
 const navItems = [
   { name: 'Dashboard', icon: 'dashboard', path: '/', active: true },
@@ -52,6 +56,7 @@ const iconMap = {
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const ChevronIcon = (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +70,13 @@ export default function Sidebar() {
     </svg>
   );
 
+  const handleSubmitIncident = async (incidentData) => {
+    console.log('Incident report submitted from emergency sidebar action:', incidentData);
+    setIsReportModalOpen(false);
+  };
+
   return (
+    <>
     <aside
       className={`${
         collapsed ? 'w-16' : 'w-64'
@@ -83,6 +94,16 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-1 px-2">
+        <button
+          type="button"
+          onClick={() => setIsReportModalOpen(true)}
+          className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-rose-600 px-3 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-offset-2 focus:ring-offset-sidebar-900"
+          title={t('Report Incident')}
+        >
+          <AlertOctagon className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{t('Report Incident')}</span>}
+        </button>
+
         {navItems.map((item) => (
           <Link
             key={item.name}
@@ -100,5 +121,12 @@ export default function Sidebar() {
         ))}
       </nav>
     </aside>
+
+    <ReportIncidentModal
+      isOpen={isReportModalOpen}
+      onClose={() => setIsReportModalOpen(false)}
+      onSubmit={handleSubmitIncident}
+    />
+    </>
   );
 }

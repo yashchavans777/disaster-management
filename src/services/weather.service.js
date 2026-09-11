@@ -25,24 +25,17 @@ const getWeatherData = async (lat, lng) => {
   }
 
   try {
-    const response = await axios.get(OPEN_METEO_BASE_URL, {
-      params: {
-        latitude,
-        longitude,
-        current: 'temperature_2m,precipitation,wind_speed_10m',
-      },
-      timeout: 10000,
-    });
+    const response = await fetch(url);
 
-    const data = response.data;
-
-    if (data?.error) {
-      throw new Error(data.reason || 'Open-Meteo returned an error');
+    if (!response.ok) {
+      throw new Error(`Open-Meteo API responded with status ${response.status}`);
     }
 
-    const current = data?.current || {};
-    const precipitation = parseNumber(current.precipitation);
-    const windSpeed = parseNumber(current.wind_speed_10m);
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(`Open-Meteo API error: ${data.reason || 'Unknown reason'}`);
+    }
 
     return {
       temperature: parseNumber(current.temperature_2m),
